@@ -1,0 +1,640 @@
+<title>SQL Field Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+  :root{
+    --ground:#f6f8fa;
+    --surface:#ffffff;
+    --surface-2:#eef2f6;
+    --ink:#181d27;
+    --muted:#586173;
+    --border:#e1e6ed;
+    --border-strong:#cfd6e0;
+    --accent:#0e7c7b;
+    --accent-soft:#0e7c7b18;
+    --code-ink:#243b53;
+    --warn:#b1502c;
+    --warn-soft:#b1502c14;
+    --shadow:0 1px 2px rgba(24,29,39,.05),0 8px 24px rgba(24,29,39,.05);
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
+    --display:"Fraunces",Georgia,serif;
+  }
+  :root:not([data-theme="light"]){
+    @media (prefers-color-scheme:dark){
+      --ground:#0f131a;
+      --surface:#161c25;
+      --surface-2:#1d2531;
+      --ink:#e7ecf3;
+      --muted:#98a3b5;
+      --border:#252e3b;
+      --border-strong:#33404f;
+      --accent:#39b6b2;
+      --accent-soft:#39b6b21f;
+      --code-ink:#bcd4e6;
+      --warn:#e0916a;
+      --warn-soft:#e0916a1a;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.3);
+    }
+  }
+  :root[data-theme="dark"]{
+    --ground:#0f131a;
+    --surface:#161c25;
+    --surface-2:#1d2531;
+    --ink:#e7ecf3;
+    --muted:#98a3b5;
+    --border:#252e3b;
+    --border-strong:#33404f;
+    --accent:#39b6b2;
+    --accent-soft:#39b6b21f;
+    --code-ink:#bcd4e6;
+    --warn:#e0916a;
+    --warn-soft:#e0916a1a;
+    --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.3);
+  }
+
+  *{box-sizing:border-box}
+  body{
+    margin:0;
+    background:var(--ground);
+    color:var(--ink);
+    font-family:var(--sans);
+    font-size:16px;
+    line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:1100px;margin:0 auto;padding:clamp(1.5rem,4vw,4rem) clamp(1rem,3vw,2rem)}
+
+  header.masthead{
+    border-bottom:1px solid var(--border);
+    padding-bottom:2rem;
+    margin-bottom:2.5rem;
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:.72rem;
+    letter-spacing:.18em;
+    text-transform:uppercase;
+    color:var(--accent);
+    margin:0 0 1rem;
+    display:flex;align-items:center;gap:.6rem;
+  }
+  .eyebrow::before{content:"";width:1.6rem;height:1px;background:var(--accent)}
+  h1{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(2.4rem,6vw,3.8rem);
+    line-height:1.02;
+    letter-spacing:-.02em;
+    margin:0 0 .6rem;
+    text-wrap:balance;
+  }
+  .lede{
+    max-width:60ch;
+    color:var(--muted);
+    font-size:1.05rem;
+    margin:0;
+  }
+  .lede code{font-family:var(--mono);font-size:.9em;color:var(--ink)}
+
+  nav.toc{
+    display:flex;flex-wrap:wrap;gap:.5rem;
+    margin-top:1.8rem;
+  }
+  nav.toc a{
+    font-family:var(--mono);
+    font-size:.78rem;
+    text-decoration:none;
+    color:var(--muted);
+    border:1px solid var(--border);
+    border-radius:999px;
+    padding:.32rem .8rem;
+    transition:.15s;
+  }
+  nav.toc a:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  section{margin-bottom:3rem;scroll-margin-top:1rem}
+  h2{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:1.6rem;
+    letter-spacing:-.01em;
+    margin:0 0 .3rem;
+    display:flex;align-items:baseline;gap:.7rem;
+  }
+  h2 .num{
+    font-family:var(--mono);
+    font-size:.8rem;
+    color:var(--accent);
+    font-weight:500;
+  }
+  section > p.intro{color:var(--muted);margin:0 0 1.2rem;max-width:65ch}
+
+  .tablecard{
+    background:var(--surface);
+    border:1px solid var(--border);
+    border-radius:14px;
+    box-shadow:var(--shadow);
+    overflow:hidden;
+  }
+  .scroll{overflow-x:auto}
+  table{border-collapse:collapse;width:100%;min-width:720px}
+  thead th{
+    text-align:left;
+    font-family:var(--mono);
+    font-size:.68rem;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    color:var(--muted);
+    font-weight:500;
+    padding:.85rem 1rem;
+    background:var(--surface-2);
+    border-bottom:1px solid var(--border-strong);
+    position:sticky;top:0;
+  }
+  tbody td{
+    padding:.9rem 1rem;
+    border-bottom:1px solid var(--border);
+    vertical-align:top;
+    font-size:.9rem;
+  }
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover td{background:var(--accent-soft)}
+
+  td.term code,td.term{
+    font-family:var(--mono);
+    font-size:.82rem;
+    font-weight:500;
+    color:var(--accent);
+    white-space:nowrap;
+  }
+  td.use{color:var(--ink);max-width:26ch}
+  td.code{width:1%}
+  td.code pre{
+    margin:0;
+    font-family:var(--mono);
+    font-size:.78rem;
+    line-height:1.55;
+    color:var(--code-ink);
+    background:var(--surface-2);
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:.55rem .7rem;
+    white-space:pre;
+  }
+  td.miss{
+    color:var(--muted);
+    max-width:30ch;
+    font-size:.85rem;
+  }
+  td.miss b{color:var(--warn);font-weight:600}
+
+  .callout{
+    background:var(--accent-soft);
+    border:1px solid var(--accent);
+    border-radius:14px;
+    padding:1.4rem 1.5rem;
+    margin-bottom:3rem;
+  }
+  .callout h2{margin-top:0;color:var(--ink)}
+  .flow{
+    font-family:var(--mono);
+    font-size:clamp(.8rem,2.5vw,1.05rem);
+    font-weight:500;
+    color:var(--ink);
+    display:flex;flex-wrap:wrap;gap:.4rem .55rem;align-items:center;
+    margin:.6rem 0 1rem;
+  }
+  .flow span{background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:.28rem .6rem}
+  .flow .arw{border:none;background:none;color:var(--accent);padding:0}
+  .callout ul{margin:.5rem 0 0;padding-left:1.1rem;color:var(--muted);font-size:.92rem}
+  .callout li{margin:.35rem 0}
+  .callout code{font-family:var(--mono);font-size:.86em;color:var(--ink)}
+
+  footer{
+    border-top:1px solid var(--border);
+    margin-top:1rem;padding-top:1.5rem;
+    color:var(--muted);font-size:.85rem;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;
+  }
+  footer .mono{font-family:var(--mono);font-size:.78rem}
+
+  @media (max-width:640px){
+    td.use,td.miss{max-width:none}
+  }
+</style>
+
+<div class="wrap">
+  <header class="masthead">
+    <p class="eyebrow">Reference &middot; built for Serg</p>
+    <h1>SQL Field Guide</h1>
+    <p class="lede">Every clause and function you've met, four ways: what it is, what it's <em>for</em>, a real example, and the mistake that bites. Examples use the tables from your StrataScratch practice &mdash; <code>employees</code>, <code>orders</code>, <code>customers</code>.</p>
+    <nav class="toc">
+      <a href="#clauses">Clauses</a>
+      <a href="#filters">Filtering</a>
+      <a href="#agg">Aggregates</a>
+      <a href="#joins">Joins</a>
+      <a href="#sets">Stacking rows</a>
+      <a href="#rowfn">Row functions</a>
+      <a href="#count">Counting a condition</a>
+      <a href="#order">Execution order</a>
+      <a href="#next">Coming next</a>
+    </nav>
+  </header>
+
+  <section id="clauses">
+    <h2><span class="num">01</span> Clauses &mdash; the skeleton</h2>
+    <p class="intro">The building blocks of every query. Written in this order, but <em>run</em> in a different one (see section 08).</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Clause</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">SELECT</td>
+          <td class="use">Choose which columns to show or compute</td>
+          <td class="code"><pre>SELECT first_name, salary</pre></td>
+          <td class="miss">Trailing comma before <code>FROM</code> &rarr; <b>"syntax error near FROM"</b></td>
+        </tr>
+        <tr>
+          <td class="term">WHERE</td>
+          <td class="use">Filter <b>rows</b> by a condition (row vs a value)</td>
+          <td class="code"><pre>WHERE salary &gt; 80000</pre></td>
+          <td class="miss">Can't use aggregates like <code>COUNT()</code> here &mdash; use <b>HAVING</b></td>
+        </tr>
+        <tr>
+          <td class="term">GROUP BY</td>
+          <td class="use">Collapse rows into groups to aggregate</td>
+          <td class="code"><pre>GROUP BY department</pre></td>
+          <td class="miss">Every non-aggregated <code>SELECT</code> column <b>must</b> appear here</td>
+        </tr>
+        <tr>
+          <td class="term">HAVING</td>
+          <td class="use">Filter <b>groups</b> by an aggregate</td>
+          <td class="code"><pre>HAVING COUNT(*) &gt;= 2</pre></td>
+          <td class="miss">Repeat the expression &mdash; <b>alias not usable</b> in HAVING</td>
+        </tr>
+        <tr>
+          <td class="term">ORDER BY</td>
+          <td class="use">Sort the final rows</td>
+          <td class="code"><pre>ORDER BY salary DESC</pre></td>
+          <td class="miss">Text-stored numbers sort as <b>strings</b> ("92000" before "100000")</td>
+        </tr>
+        <tr>
+          <td class="term">LIMIT</td>
+          <td class="use">Keep only the first N rows</td>
+          <td class="code"><pre>ORDER BY salary DESC
+LIMIT 10</pre></td>
+          <td class="miss"><code>LIMIT</code> without <code>ORDER BY</code> &rarr; <b>arbitrary</b> rows</td>
+        </tr>
+        <tr>
+          <td class="term">DISTINCT</td>
+          <td class="use">Remove duplicate rows from output</td>
+          <td class="code"><pre>SELECT DISTINCT city</pre></td>
+          <td class="miss">Applies to the <b>whole row</b>, not one column</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <section id="filters">
+    <h2><span class="num">02</span> Filtering operators</h2>
+    <p class="intro">Live inside <code>WHERE</code> and <code>HAVING</code>. The boundary and NULL rules here caused most of your early bugs.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Operator</th><th>Use it when&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">= &lt;&gt; &lt; &gt; &lt;= &gt;=</td>
+          <td class="use">Compare to a value; <code>&lt;=</code>/<code>&gt;=</code> include the boundary</td>
+          <td class="code"><pre>WHERE age &gt;= 70</pre></td>
+          <td class="miss">"more than" = <b>&gt;</b> (excludes); "or more" = <b>&gt;=</b> (includes)</td>
+        </tr>
+        <tr>
+          <td class="term">BETWEEN</td>
+          <td class="use">Value in a range, inclusive both ends</td>
+          <td class="code"><pre>WHERE order_date BETWEEN
+'2019-03-01' AND '2019-03-31'</pre></td>
+          <td class="miss">Inclusive end drops <b>timestamps</b> after midnight &mdash; prefer <code>&gt;= start AND &lt; next</code></td>
+        </tr>
+        <tr>
+          <td class="term">IN (&hellip;)</td>
+          <td class="use">Value is one of a list</td>
+          <td class="code"><pre>WHERE department
+IN ('HR','Admin')</pre></td>
+          <td class="miss">Shorthand for many <code>OR</code>s &mdash; don't mix up with <code>AND</code></td>
+        </tr>
+        <tr>
+          <td class="term">LIKE</td>
+          <td class="use">Match a text pattern</td>
+          <td class="code"><pre>WHERE LOWER(name)
+LIKE 'draft%'</pre></td>
+          <td class="miss"><code>%</code>=any chars, <code>_</code>=one char. No wildcard = same as <code>=</code></td>
+        </tr>
+        <tr>
+          <td class="term">IS NULL</td>
+          <td class="use">Test for a missing value</td>
+          <td class="code"><pre>WHERE phone_number
+IS NULL</pre></td>
+          <td class="miss"><code>= NULL</code> <b>never works</b> &mdash; and <code>&lt;&gt;</code> silently drops NULL rows</td>
+        </tr>
+        <tr>
+          <td class="term">AND / OR</td>
+          <td class="use">Combine conditions</td>
+          <td class="code"><pre>WHERE dept IN ('HR','Admin')
+AND salary &gt; 80000</pre></td>
+          <td class="miss"><code>AND</code> binds <b>tighter</b> than <code>OR</code> &mdash; parenthesize to be safe</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <section id="agg">
+    <h2><span class="num">03</span> Aggregate functions</h2>
+    <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Function</th><th>Gives you&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">COUNT(*)</td>
+          <td class="use">Number of rows</td>
+          <td class="code"><pre>SELECT COUNT(*) FROM orders</pre></td>
+          <td class="miss">Counts NULL rows too &mdash; after a LEFT JOIN that over-counts</td>
+        </tr>
+        <tr>
+          <td class="term">COUNT(col)</td>
+          <td class="use">Non-NULL values in a column</td>
+          <td class="code"><pre>COUNT(phone_number)</pre></td>
+          <td class="miss">Ignores NULLs &mdash; different number from <code>COUNT(*)</code></td>
+        </tr>
+        <tr>
+          <td class="term">COUNT(DISTINCT col)</td>
+          <td class="use">How many different values</td>
+          <td class="code"><pre>COUNT(DISTINCT unit_id)</pre></td>
+          <td class="miss">Forgetting <code>DISTINCT</code> counts repeats</td>
+        </tr>
+        <tr>
+          <td class="term">SUM(col)</td>
+          <td class="use">Total</td>
+          <td class="code"><pre>SUM(total_order_cost)</pre></td>
+          <td class="miss">On text-typed columns &rarr; error; <code>CAST</code> first</td>
+        </tr>
+        <tr>
+          <td class="term">AVG(col)</td>
+          <td class="use">Average</td>
+          <td class="code"><pre>AVG(salary)</pre></td>
+          <td class="miss">Skips NULLs &mdash; not the same as treating them as 0</td>
+        </tr>
+        <tr>
+          <td class="term">MIN / MAX(col)</td>
+          <td class="use">Smallest / largest</td>
+          <td class="code"><pre>MAX(salary)</pre></td>
+          <td class="miss">On text columns, "max" is alphabetical, not numeric</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <section id="joins">
+    <h2><span class="num">04</span> Joins &mdash; combine tables side by side</h2>
+    <p class="intro">Joins <b>add columns</b>. The <code>ON</code> is just a condition &mdash; usually a foreign key, but it can compare any columns.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Join</th><th>Use it when you want&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">INNER JOIN</td>
+          <td class="use">Only rows matching in <b>both</b> tables</td>
+          <td class="code"><pre>FROM orders o
+INNER JOIN customers c
+  ON o.cust_id = c.id</pre></td>
+          <td class="miss">Joining <code>id = id</code> &mdash; use the <b>foreign key</b> (<code>cust_id</code>)</td>
+        </tr>
+        <tr>
+          <td class="term">LEFT JOIN</td>
+          <td class="use"><b>All</b> left rows + matches (NULL where none)</td>
+          <td class="code"><pre>FROM customers c
+LEFT JOIN orders o
+  ON c.id = o.cust_id</pre></td>
+          <td class="miss">Filtering the right table in <code>WHERE</code> turns it back into an INNER JOIN</td>
+        </tr>
+        <tr>
+          <td class="term">RIGHT JOIN</td>
+          <td class="use">All right rows + matches</td>
+          <td class="code"><pre>FROM customers c
+RIGHT JOIN orders o
+  ON c.id = o.cust_id</pre></td>
+          <td class="miss">Rarely needed &mdash; usually clearer to flip to LEFT</td>
+        </tr>
+        <tr>
+          <td class="term">FULL OUTER JOIN</td>
+          <td class="use">All rows from <b>both</b> sides</td>
+          <td class="code"><pre>FULL OUTER JOIN orders o
+  ON c.id = o.cust_id</pre></td>
+          <td class="miss"><b>Not in MySQL</b> &mdash; emulate with <code>LEFT ... UNION ... RIGHT</code></td>
+        </tr>
+        <tr>
+          <td class="term">CROSS JOIN</td>
+          <td class="use">Every combination of every row</td>
+          <td class="code"><pre>FROM nums a
+CROSS JOIN nums b</pre></td>
+          <td class="miss">No <code>ON</code> &mdash; produces N&times;N rows (all pairs)</td>
+        </tr>
+        <tr>
+          <td class="term">Self-join</td>
+          <td class="use">Compare a row to <b>other rows</b> in the same table</td>
+          <td class="code"><pre>FROM employees e1
+JOIN employees e2
+  ON e1.dept = e2.dept
+ AND e1.salary &gt; e2.salary</pre></td>
+          <td class="miss">Needs two aliases; produces duplicates &rarr; add <code>DISTINCT</code></td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <section id="sets">
+    <h2><span class="num">05</span> Stacking rows</h2>
+    <p class="intro">Where joins add columns, these add <b>rows</b> &mdash; two result sets on top of each other. Both halves need the same column count and order.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Keyword</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">UNION</td>
+          <td class="use">Stack two results, <b>remove</b> duplicates</td>
+          <td class="code"><pre>SELECT 'customers', COUNT(*) FROM customers
+UNION
+SELECT 'orders', COUNT(*) FROM orders</pre></td>
+          <td class="miss">Column count/order must match both halves</td>
+        </tr>
+        <tr>
+          <td class="term">UNION ALL</td>
+          <td class="use">Stack two results, <b>keep</b> duplicates (faster)</td>
+          <td class="code"><pre>SELECT dept FROM a
+UNION ALL
+SELECT dept FROM b</pre></td>
+          <td class="miss">Duplicates the rows &mdash; use plain <code>UNION</code> if you need unique</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <section id="rowfn">
+    <h2><span class="num">06</span> Row-level functions</h2>
+    <p class="intro">Transform a value <em>per row</em>. These clean, convert, and label your data &mdash; the daily work of data quality.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Function</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">CASE WHEN</td>
+          <td class="use">If/else per row: label, bucket, or flag</td>
+          <td class="code"><pre>CASE WHEN salary &lt; 75000 THEN 'low'
+     WHEN salary &lt; 100000 THEN 'mid'
+     ELSE 'high' END</pre></td>
+          <td class="miss">Order matters &mdash; first match wins; overlapping ranges mis-bucket</td>
+        </tr>
+        <tr>
+          <td class="term">COALESCE(a,b,&hellip;)</td>
+          <td class="use">First non-NULL value (default for NULLs)</td>
+          <td class="code"><pre>COALESCE(phone, 'none')</pre></td>
+          <td class="miss">Arguments must be compatible types</td>
+        </tr>
+        <tr>
+          <td class="term">NULLIF(a,b)</td>
+          <td class="use">Return NULL if <code>a = b</code></td>
+          <td class="code"><pre>x / NULLIF(COUNT(*), 0)</pre></td>
+          <td class="miss">Wrap the <b>denominator</b> to dodge divide-by-zero, not the whole thing</td>
+        </tr>
+        <tr>
+          <td class="term">CAST(x AS type)</td>
+          <td class="use">Convert type (text &rarr; number)</td>
+          <td class="code"><pre>CAST(age AS INTEGER) &gt; 40</pre></td>
+          <td class="miss">Skipping it &rarr; string comparison ("9" &gt; "40" is true)</td>
+        </tr>
+        <tr>
+          <td class="term">LOWER / UPPER</td>
+          <td class="use">Normalize case before comparing</td>
+          <td class="code"><pre>WHERE LOWER(dept) = 'hr'</pre></td>
+          <td class="miss"><code>LOWER(x) = 'HR'</code> never matches &mdash; compare to lowercase</td>
+        </tr>
+        <tr>
+          <td class="term">REPLACE(x,&hellip;)</td>
+          <td class="use">Strip / swap characters</td>
+          <td class="code"><pre>REPLACE(LOWER(device),' ','')</pre></td>
+          <td class="miss">Only removes exact matches &mdash; case still needs <code>LOWER</code></td>
+        </tr>
+        <tr>
+          <td class="term">GREATEST / LEAST</td>
+          <td class="use">Larger / smaller of several values</td>
+          <td class="code"><pre>GREATEST(a.number, b.number)</pre></td>
+          <td class="miss">A NULL argument can make the whole result NULL</td>
+        </tr>
+        <tr>
+          <td class="term">ROUND(x,n)</td>
+          <td class="use">Round to n decimals</td>
+          <td class="code"><pre>ROUND(count/total * 100, 2)</pre></td>
+          <td class="miss">Watch the parens &mdash; <code>ROUND(value, 2)</code>, both inside</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <section id="count">
+    <h2><span class="num">07</span> Counting a condition</h2>
+    <p class="intro">SQL has no "count only the matching rows" function &mdash; you fake it by turning the condition into 1s and 0s, then summing. Three spellings, same answer.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Pattern</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">SUM(CASE&hellip;)</td>
+          <td class="use">Count rows matching any condition</td>
+          <td class="code"><pre>SUM(CASE WHEN phone IS NULL
+    THEN 1 ELSE 0 END)</pre></td>
+          <td class="miss">The 0s don't affect the total &mdash; only the 1s count</td>
+        </tr>
+        <tr>
+          <td class="term">COUNT(CASE&hellip;)</td>
+          <td class="use">Same, via NULL-skipping</td>
+          <td class="code"><pre>COUNT(CASE WHEN phone IS NULL
+      THEN 1 END)</pre></td>
+          <td class="miss">Omit <code>ELSE</code> so non-matches become NULL &amp; are skipped</td>
+        </tr>
+        <tr>
+          <td class="term">COUNT(*) - COUNT(col)</td>
+          <td class="use">Count the NULLs specifically</td>
+          <td class="code"><pre>COUNT(*) - COUNT(phone)</pre></td>
+          <td class="miss">&mdash;</td>
+        </tr>
+        <tr>
+          <td class="term">COUNT(condition)</td>
+          <td class="use"><b>Does NOT work</b> &mdash; avoid</td>
+          <td class="code"><pre>COUNT(phone IS NULL)  -- wrong</pre></td>
+          <td class="miss">A boolean is never NULL &rarr; counts <b>every</b> row</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <div class="callout" id="order">
+    <h2><span class="num">08</span> The key mental model &mdash; execution order</h2>
+    <p style="margin:.2rem 0 .4rem;color:var(--muted)">You <em>write</em> the clauses in one order, but SQL <em>runs</em> them in another. This single fact explains most of the "why can't I&hellip;" bugs.</p>
+    <div class="flow">
+      <span>FROM</span><span class="arw">&rarr;</span>
+      <span>WHERE</span><span class="arw">&rarr;</span>
+      <span>GROUP BY</span><span class="arw">&rarr;</span>
+      <span>HAVING</span><span class="arw">&rarr;</span>
+      <span>SELECT</span><span class="arw">&rarr;</span>
+      <span>ORDER BY</span>
+    </div>
+    <ul>
+      <li><code>WHERE</code> can't use <code>COUNT</code>/<code>SUM</code> &mdash; aggregates don't exist until after <code>GROUP BY</code>, so filter groups with <code>HAVING</code>.</li>
+      <li>Aliases work in <code>ORDER BY</code> but not <code>HAVING</code>/<code>WHERE</code> &mdash; the alias is born in <code>SELECT</code>, which runs late.</li>
+      <li><code>SELECT</code> &mdash; where you build aliases and computed columns &mdash; happens almost <b>last</b>.</li>
+    </ul>
+  </div>
+
+  <section id="next">
+    <h2><span class="num">09</span> Coming next &mdash; advanced</h2>
+    <p class="intro">Not learned yet. Window functions are the dividing line between "basic" and "pokro&#269;il&aacute; znalost SQL" &mdash; learn them next.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Tool</th><th>Use it to&hellip;</th><th>Example</th><th>Note</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">&hellip; OVER (PARTITION BY&hellip;)</td>
+          <td class="use">Compare/rank a row vs its group <b>without</b> collapsing rows</td>
+          <td class="code"><pre>AVG(salary) OVER
+(PARTITION BY department)</pre></td>
+          <td class="miss">The self-join alternative &mdash; cleaner once learned</td>
+        </tr>
+        <tr>
+          <td class="term">ROW_NUMBER / RANK</td>
+          <td class="use">Number or rank rows within a group</td>
+          <td class="code"><pre>ROW_NUMBER() OVER
+(PARTITION BY dept
+ ORDER BY salary DESC)</pre></td>
+          <td class="miss">The "top N per group" pattern</td>
+        </tr>
+        <tr>
+          <td class="term">LAG / LEAD</td>
+          <td class="use">Look at the previous / next row's value</td>
+          <td class="code"><pre>LAG(order_date) OVER
+(PARTITION BY cust_id
+ ORDER BY order_date)</pre></td>
+          <td class="miss">For "compared to last time" questions</td>
+        </tr>
+        <tr>
+          <td class="term">WITH name AS (&hellip;)</td>
+          <td class="use">Name a sub-result; build a query in readable steps (CTE)</td>
+          <td class="code"><pre>WITH ranked AS (
+  SELECT ...
+)
+SELECT * FROM ranked</pre></td>
+          <td class="miss">Cleaner than nesting subqueries</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <footer>
+    <span>Your working reference &mdash; grows as you do.</span>
+    <span class="mono">FROM &rarr; WHERE &rarr; GROUP BY &rarr; HAVING &rarr; SELECT &rarr; ORDER BY</span>
+  </footer>
+</div>
