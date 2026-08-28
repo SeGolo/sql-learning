@@ -441,7 +441,11 @@ CROSS JOIN nums b</pre></td>
         <tr>
           <td class="term">Self-join</td>
           <td class="use">Compare a row to <b>other rows</b> in the same table</td>
-          <td class="code"><pre>FROM employees e1
+          <td class="code"><pre>SELECT DISTINCT
+  e1.first_name AS higher_earner,
+  e1.department,
+  e1.salary
+FROM employees e1
 JOIN employees e2
   ON e1.dept = e2.dept
  AND e1.salary &gt; e2.salary</pre></td>
