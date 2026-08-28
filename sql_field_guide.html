@@ -451,6 +451,21 @@ JOIN employees e2
  AND e1.salary &gt; e2.salary</pre></td>
           <td class="miss">Needs two aliases; produces duplicates &rarr; add <code>DISTINCT</code></td>
         </tr>
+        <tr>
+          <td class="term">Self-join 2</td>
+          <td class="use">Find all pairs of employees in the same department.</td>
+          <td class="code"><pre>
+SELECT
+  a.first_name AS employee1,
+  b.first_name AS employee2,
+  a.department
+FROM employee a
+JOIN employee b
+  ON a.department = b.department -- same department
+  AND a.id <> b.id -- avoid self-pair
+          </pre></td>
+          <td class="miss">Needs a name and a query; can be referenced multiple times in the main query</td>
+        </tr>
       </tbody>
     </table></div></div>
   </section>
@@ -630,7 +645,7 @@ SELECT dept FROM b</pre></td>
           <td class="code"><pre>WITH ranked AS (
   SELECT ...
 )
-SELECT * 99999 FROM ranked</pre></td>
+SELECT * FROM ranked</pre></td>
           <td class="miss">Cleaner than nesting subqueries</td>
         </tr>
       </tbody>
