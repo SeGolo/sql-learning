@@ -307,6 +307,13 @@
   }
   footer .mono{font-family:var(--mono);font-size:.78rem}
 
+  /* NOTE: a short explanatory aside placed after a table (used in section 04). */
+  .note{margin-top:1.3rem;color:var(--muted);font-size:.9rem;max-width:66ch}
+  .note b{color:var(--ink)}
+  .note ul{margin:.5rem 0 0;padding-left:1.15rem}
+  .note li{margin:.4rem 0}
+  .note code{font-family:var(--mono);font-size:.86em;color:var(--accent)}  /* inline code inside a note = teal mono */
+
   /* SMALL-SCREEN TWEAK: on windows 640px wide or narrower, drop the
      column width caps so the text can use the full width. */
   @media (max-width:640px){
@@ -593,8 +600,43 @@ JOIN employee b
           </pre></td>
           <td class="miss">Needs a name and a query; can be referenced multiple times in the main query</td>
         </tr>
+        <tr>
+          <td class="term">Self-join 3</td>
+          <td class="use">List every worker who shares a salary with someone else. The 2nd copy is only a <b>test</b> &mdash; it is not in the output.</td>
+          <td class="code"><pre>SELECT DISTINCT
+  w1.worker_id,
+  w1.first_name AS name,
+  w2.salary   AS payment
+FROM worker w1
+JOIN worker w2
+  ON w1.worker_id &lt;&gt; w2.worker_id  -- "any OTHER worker"
+WHERE w1.salary = w2.salary</pre></td>
+          <td class="miss">Use <code>&lt;&gt;</code>, not <code>&lt;</code> &mdash; so <b>both</b> workers of a matching pair get a row. <code>DISTINCT</code> collapses repeats.</td>
+        </tr>
+        <tr>
+          <td class="term">Self-join 4</td>
+          <td class="use">All number <b>pairs</b> whose product exceeds 11. Both numbers <b>are</b> the output.</td>
+          <td class="code"><pre>SELECT DISTINCT
+  n1.number AS num1,
+  n2.number AS num2
+FROM transportation_numbers n1
+JOIN transportation_numbers n2
+  ON n1.index &lt; n2.index        -- keep ONE ordering
+WHERE n1.number * n2.number &gt; 11</pre></td>
+          <td class="miss"><code>&lt;&gt;</code> here would output <code>(2,7)</code> <em>and</em> <code>(7,2)</code> &mdash; the same pair twice.</td>
+        </tr>
       </tbody>
     </table></div></div>
+
+    <!-- NOTE: how to choose the comparison operator for a self-join's key -->
+    <div class="note">
+      <b>Self-join keys: <code>&lt;&gt;</code> vs <code>&lt;</code> / <code>&gt;</code></b> &mdash; it turns on whether the second copy of the table is <em>part of the answer</em> or just an existence test.
+      <ul>
+        <li><b>Second copy is shown in the output</b> (a pair, e.g. <code>num1, num2</code> &mdash; Self-join 4) &rarr; use <code>&lt;</code> or <code>&gt;</code>. <code>(2,7)</code> and <code>(7,2)</code> are the same pair, so <code>&lt;</code> keeps one ordering and also removes self-pairs.</li>
+        <li><b>Second copy is only a test</b> ("does another row exist where&hellip;?" &mdash; only the first copy is output &mdash; Self-join 3) &rarr; use <code>&lt;&gt;</code>. You need "any other row", and every row must be able to play the first-copy part, so <code>&lt;</code> would silently drop some.</li>
+        <li>Set-theory view: <code>&lt;</code> yields each <b>unordered</b> pair <code>{a, b}</code> once; <code>&lt;&gt;</code> yields every <b>ordered</b> pair <code>(a, b)</code> with <code>a &ne; b</code> &mdash; both directions.</li>
+      </ul>
+    </div>
   </section>
 
   <!-- 05 - Stacking rows: UNION family, adds rows instead of columns. -->
