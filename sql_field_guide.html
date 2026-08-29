@@ -1,26 +1,68 @@
+<!-- ============================================================================
+     SQL FIELD GUIDE  -  single-file HTML reference
+
+     How this file is put together, top to bottom:
+       1. <title> + <link> font tags        (this block)
+       2. <style> ... </style>              ALL the CSS
+       3. <div class="wrap"> ... </div>     ALL the visible content
+
+     There is no <html>, <head> or <body> tag here. The browser adds
+     them automatically, so a bare reference file like this still works.
+
+     The comments below explain, in order, what each piece does.
+     ============================================================================ -->
+
+<!-- Shown on the browser tab. With no <head>, the browser still picks this up. -->
 <title>SQL Field Guide</title>
+
+<!-- preconnect = "open a network connection to these servers now, in advance",
+     so the font files start downloading a few milliseconds sooner. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+<!-- The actual web fonts, from Google Fonts:
+       Fraunces      -> headings (the "display" font)
+       IBM Plex Sans -> body text
+       IBM Plex Mono -> code / monospace
+     The ":wght@400;500;600" part lists which weights to download. -->
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+
 <style>
+  /* ============================================================
+     THEME COLOURS - LIGHT MODE
+     ":root" is the <html> element - the very top of the page.
+     Each "--name: value" line is a CSS custom property (a variable).
+     Further down, "var(--ink)" pastes in whatever --ink is set to here.
+     Define a colour once, reuse it everywhere, change it in one place.
+     These values are the LIGHT theme.
+     ============================================================ */
   :root{
-    --ground:#f6f8fa;
-    --surface:#ffffff;
-    --surface-2:#eef2f6;
-    --ink:#181d27;
-    --muted:#586173;
-    --border:#e1e6ed;
-    --border-strong:#cfd6e0;
-    --accent:#0e7c7b;
-    --accent-soft:#0e7c7b18;
-    --code-ink:#243b53;
-    --warn:#b1502c;
+    --ground:#f6f8fa;        /* page background */
+    --surface:#ffffff;       /* card background (the white boxes around tables) */
+    --surface-2:#eef2f6;     /* a slightly darker fill: code blocks, table headers */
+    --ink:#181d27;           /* main text colour */
+    --muted:#586173;         /* secondary / dimmer text */
+    --border:#e1e6ed;        /* hairline border colour */
+    --border-strong:#cfd6e0; /* a heavier border colour */
+    --accent:#0e7c7b;        /* the teal: links, code terms, section numbers */
+    --accent-soft:#0e7c7b18; /* same teal, faint (the "18" on the end = ~9% opacity) - for tints */
+    --code-ink:#243b53;      /* text colour inside code blocks */
+    --warn:#b1502c;          /* rust-red, used to stress the "mistake" bits */
     --warn-soft:#b1502c14;
-    --shadow:0 1px 2px rgba(24,29,39,.05),0 8px 24px rgba(24,29,39,.05);
-    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;
+    --shadow:0 1px 2px rgba(24,29,39,.05),0 8px 24px rgba(24,29,39,.05); /* card drop shadow, built from two layers */
+    --mono:"IBM Plex Mono",ui-monospace,SFMono-Regular,Menlo,monospace;   /* font "stacks": browser uses the first one it has */
     --sans:"IBM Plex Sans",system-ui,-apple-system,sans-serif;
     --display:"Fraunces",Georgia,serif;
   }
+
+  /* ============================================================
+     THEME COLOURS - DARK MODE (automatic)
+     Re-declare the SAME variable names with darker values, but only
+     when BOTH conditions hold:
+       :not([data-theme="light"])          -> the page is not force-set to light
+       @media (prefers-color-scheme:dark)  -> the OS / browser is in dark mode
+     (An @media block sitting inside a selector like this is "CSS nesting".)
+     ============================================================ */
   :root:not([data-theme="light"]){
     @media (prefers-color-scheme:dark){
       --ground:#0f131a;
@@ -38,6 +80,12 @@
       --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.3);
     }
   }
+
+  /* ============================================================
+     THEME COLOURS - DARK MODE (forced)
+     If something sets <html data-theme="dark">, use dark values no
+     matter what the operating system is set to. Same values as above.
+     ============================================================ */
   :root[data-theme="dark"]{
     --ground:#0f131a;
     --surface:#161c25;
@@ -54,93 +102,121 @@
     --shadow:0 1px 2px rgba(0,0,0,.3),0 10px 30px rgba(0,0,0,.3);
   }
 
+  /* RESET: "*" selects every element. box-sizing:border-box makes an
+     element's declared width/height INCLUDE its padding and border,
+     which keeps layout maths predictable. */
   *{box-sizing:border-box}
+
+  /* PAGE BASE: default text and background for the whole document. */
   body{
-    margin:0;
+    margin:0;                            /* remove the browser's default page margin */
     background:var(--ground);
     color:var(--ink);
     font-family:var(--sans);
     font-size:16px;
-    line-height:1.6;
-    -webkit-font-smoothing:antialiased;
+    line-height:1.6;                     /* line spacing = 1.6x the font size */
+    -webkit-font-smoothing:antialiased;  /* slightly lighter text rendering on Chrome/Safari */
   }
+
+  /* CONTENT COLUMN: holds everything on the page.
+     max-width caps how wide it gets; "margin:0 auto" centres it.
+     clamp(MIN, PREFERRED, MAX) = a value that scales with the window
+     width but never goes below MIN or above MAX - here, fluid padding. */
   .wrap{max-width:1100px;margin:0 auto;padding:clamp(1.5rem,4vw,4rem) clamp(1rem,3vw,2rem)}
 
+  /* MASTHEAD: the title block at the very top of the page. */
   header.masthead{
-    border-bottom:1px solid var(--border);
+    border-bottom:1px solid var(--border);  /* divider line under the header */
     padding-bottom:2rem;
     margin-bottom:2.5rem;
   }
+
+  /* EYEBROW: the small uppercase label above the H1 ("Reference - built for Serg"). */
   .eyebrow{
     font-family:var(--mono);
     font-size:.72rem;
-    letter-spacing:.18em;
+    letter-spacing:.18em;                       /* extra space between letters */
     text-transform:uppercase;
     color:var(--accent);
     margin:0 0 1rem;
-    display:flex;align-items:center;gap:.6rem;
+    display:flex;align-items:center;gap:.6rem;  /* lay children in a row, vertically centred, 0.6rem apart */
   }
+  /* ::before inserts a generated element before the text. Here it's an
+     empty box styled to look like a short horizontal rule. */
   .eyebrow::before{content:"";width:1.6rem;height:1px;background:var(--accent)}
+
+  /* H1: the main page title. */
   h1{
     font-family:var(--display);
     font-weight:600;
-    font-size:clamp(2.4rem,6vw,3.8rem);
+    font-size:clamp(2.4rem,6vw,3.8rem);  /* fluid: between 2.4rem and 3.8rem depending on window width */
     line-height:1.02;
-    letter-spacing:-.02em;
+    letter-spacing:-.02em;               /* pull letters slightly together (tighter headline look) */
     margin:0 0 .6rem;
-    text-wrap:balance;
+    text-wrap:balance;                   /* even out word counts across wrapped lines */
   }
+
+  /* LEDE: the intro paragraph under the title. */
   .lede{
-    max-width:60ch;
+    max-width:60ch;        /* about 60 characters per line - comfortable reading width */
     color:var(--muted);
     font-size:1.05rem;
     margin:0;
   }
-  .lede code{font-family:var(--mono);font-size:.9em;color:var(--ink)}
+  .lede code{font-family:var(--mono);font-size:.9em;color:var(--ink)}  /* inline <code> inside the lede */
 
+  /* TABLE OF CONTENTS: the row of rounded "pill" links. */
   nav.toc{
-    display:flex;flex-wrap:wrap;gap:.5rem;
+    display:flex;flex-wrap:wrap;gap:.5rem;  /* row of items that wraps onto new lines, 0.5rem gaps */
     margin-top:1.8rem;
   }
   nav.toc a{
     font-family:var(--mono);
     font-size:.78rem;
-    text-decoration:none;
+    text-decoration:none;               /* no underline */
     color:var(--muted);
     border:1px solid var(--border);
-    border-radius:999px;
+    border-radius:999px;                /* very large radius = fully rounded pill ends */
     padding:.32rem .8rem;
-    transition:.15s;
+    transition:.15s;                    /* animate colour/border changes over 0.15s */
   }
-  nav.toc a:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}
-  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  nav.toc a:hover{color:var(--accent);border-color:var(--accent);background:var(--accent-soft)}  /* on mouse-over */
+  nav.toc a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}                    /* keyboard-focus ring (accessibility) */
 
-  section{margin-bottom:3rem;scroll-margin-top:1rem}
+  /* SECTIONS and their H2 headings. */
+  section{margin-bottom:3rem;scroll-margin-top:1rem}  /* scroll-margin: leave a 1rem gap above when you jump here via a #link */
   h2{
     font-family:var(--display);
     font-weight:600;
     font-size:1.6rem;
     letter-spacing:-.01em;
     margin:0 0 .3rem;
-    display:flex;align-items:baseline;gap:.7rem;
+    display:flex;align-items:baseline;gap:.7rem;  /* number + text share the same text baseline */
   }
-  h2 .num{
+  h2 .num{                 /* the "01", "02" ... number chip inside each H2 */
     font-family:var(--mono);
     font-size:.8rem;
     color:var(--accent);
     font-weight:500;
   }
+  /* ">" means "direct child only": a <p class="intro"> placed straight inside a <section>. */
   section > p.intro{color:var(--muted);margin:0 0 1.2rem;max-width:65ch}
 
+  /* TABLE CARD - every table is wrapped in three layers:
+       .tablecard  -> the white rounded box with border + shadow
+       .scroll     -> lets the table scroll sideways on narrow screens
+       <table>     -> the data itself */
   .tablecard{
     background:var(--surface);
     border:1px solid var(--border);
     border-radius:14px;
     box-shadow:var(--shadow);
-    overflow:hidden;
+    overflow:hidden;       /* clip the table's square corners to the card's rounded ones */
   }
-  .scroll{overflow-x:auto}
-  table{border-collapse:collapse;width:100%;min-width:720px}
+  .scroll{overflow-x:auto}  /* show a horizontal scrollbar only when the table is too wide to fit */
+  table{border-collapse:collapse;width:100%;min-width:720px}  /* collapse = shared single borders; min-width forces the sideways scroll when cramped */
+
+  /* THEAD TH - the header row cells. */
   thead th{
     text-align:left;
     font-family:var(--mono);
@@ -152,27 +228,33 @@
     padding:.85rem 1rem;
     background:var(--surface-2);
     border-bottom:1px solid var(--border-strong);
-    position:sticky;top:0;
+    position:sticky;top:0;   /* header stays pinned at the top while you scroll the table */
   }
+  /* TBODY TD - the data cells. */
   tbody td{
     padding:.9rem 1rem;
-    border-bottom:1px solid var(--border);
-    vertical-align:top;
+    border-bottom:1px solid var(--border);  /* row divider line */
+    vertical-align:top;                     /* text starts at the top of tall cells */
     font-size:.9rem;
   }
-  tbody tr:last-child td{border-bottom:none}
-  tbody tr:hover td{background:var(--accent-soft)}
+  tbody tr:last-child td{border-bottom:none}       /* no divider under the final row */
+  tbody tr:hover td{background:var(--accent-soft)}  /* tint the whole row under the mouse */
 
-  td.term code,td.term{
+  /* THE FOUR COLUMN TYPES - each <tr> has 4 cells tagged by class:
+       .term -> the clause / function name  (teal, monospace)
+       .use  -> plain-English "what it's for"
+       .code -> the example, inside a <pre> block
+       .miss -> the common mistake */
+  td.term code,td.term{      /* matches <td class="term"> AND any <code> inside one */
     font-family:var(--mono);
     font-size:.82rem;
     font-weight:500;
     color:var(--accent);
-    white-space:nowrap;
+    white-space:nowrap;      /* keep the name on a single line */
   }
   td.use{color:var(--ink);max-width:26ch}
-  td.code{width:1%}
-  td.code pre{
+  td.code{width:1%}          /* "1%" + non-wrapping content = shrink this column to just fit the code */
+  td.code pre{               /* the code block itself */
     margin:0;
     font-family:var(--mono);
     font-size:.78rem;
@@ -182,15 +264,16 @@
     border:1px solid var(--border);
     border-radius:8px;
     padding:.55rem .7rem;
-    white-space:pre;
+    white-space:pre;         /* keep the SQL's own line breaks and spacing exactly as typed */
   }
   td.miss{
     color:var(--muted);
     max-width:30ch;
     font-size:.85rem;
   }
-  td.miss b{color:var(--warn);font-weight:600}
+  td.miss b{color:var(--warn);font-weight:600}  /* <b> inside a mistake cell = rust-red emphasis */
 
+  /* CALLOUT - the highlighted box used for section 08. */
   .callout{
     background:var(--accent-soft);
     border:1px solid var(--accent);
@@ -199,38 +282,49 @@
     margin-bottom:3rem;
   }
   .callout h2{margin-top:0;color:var(--ink)}
+
+  /* FLOW - the "FROM -> WHERE -> ..." row of chips inside the callout. */
   .flow{
     font-family:var(--mono);
     font-size:clamp(.8rem,2.5vw,1.05rem);
     font-weight:500;
     color:var(--ink);
-    display:flex;flex-wrap:wrap;gap:.4rem .55rem;align-items:center;
+    display:flex;flex-wrap:wrap;gap:.4rem .55rem;align-items:center;  /* gap: 0.4rem between wrapped rows, 0.55rem between items */
     margin:.6rem 0 1rem;
   }
-  .flow span{background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:.28rem .6rem}
-  .flow .arw{border:none;background:none;color:var(--accent);padding:0}
+  .flow span{background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:.28rem .6rem}  /* each keyword chip */
+  .flow .arw{border:none;background:none;color:var(--accent);padding:0}  /* the "->" arrows: strip the chip styling off */
   .callout ul{margin:.5rem 0 0;padding-left:1.1rem;color:var(--muted);font-size:.92rem}
   .callout li{margin:.35rem 0}
   .callout code{font-family:var(--mono);font-size:.86em;color:var(--ink)}
 
+  /* FOOTER - the strip at the bottom of the page. */
   footer{
     border-top:1px solid var(--border);
     margin-top:1rem;padding-top:1.5rem;
     color:var(--muted);font-size:.85rem;
-    display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;
+    display:flex;justify-content:space-between;flex-wrap:wrap;gap:.5rem;  /* push the two <span>s to opposite ends */
   }
   footer .mono{font-family:var(--mono);font-size:.78rem}
 
+  /* SMALL-SCREEN TWEAK: on windows 640px wide or narrower, drop the
+     column width caps so the text can use the full width. */
   @media (max-width:640px){
     td.use,td.miss{max-width:none}
   }
 </style>
 
+<!-- ============================ VISIBLE CONTENT ============================ -->
 <div class="wrap">
+
+  <!-- MASTHEAD: eyebrow label, big title, intro paragraph, then the TOC. -->
   <header class="masthead">
     <p class="eyebrow">Reference &middot; built for Serg</p>
     <h1>SQL Field Guide</h1>
     <p class="lede">Every clause and function you've met, four ways: what it is, what it's <em>for</em>, a real example, and the mistake that bites. Examples use the tables from your StrataScratch practice &mdash; <code>employees</code>, <code>orders</code>, <code>customers</code>.</p>
+
+    <!-- TABLE OF CONTENTS: each <a href="#id"> scrolls to the element
+         further down that has the matching id="..." attribute. -->
     <nav class="toc">
       <a href="#clauses">Clauses</a>
       <a href="#filters">Filtering</a>
@@ -244,6 +338,34 @@
     </nav>
   </header>
 
+  <!-- ==========================================================================
+       ANATOMY OF EVERY SECTION - sections 01-07 and 09 all use this exact shape:
+
+         <section id="X">                     one topic; the TOC links point here
+           <h2><span class="num">NN</span> Title</h2>
+           <p class="intro">one-line overview</p>
+           <div class="tablecard">            the white rounded box
+             <div class="scroll">             enables sideways scroll on mobile
+               <table>
+                 <thead><tr> ...4 <th> headings... </tr></thead>
+                 <tbody>
+                   <tr>                        one row = one clause / function
+                     <td class="term"> name </td>
+                     <td class="use">  what it's for </td>
+                     <td class="code"> <pre>example</pre> </td>
+                     <td class="miss"> common mistake </td>
+                   </tr>
+                   ...more rows...
+                 </tbody>
+               </table>
+             </div>
+           </div>
+         </section>
+
+       Only the comment marker changes between sections; the structure repeats.
+       ========================================================================== -->
+
+  <!-- 01 - Clauses: the skeleton of a query. -->
   <section id="clauses">
     <h2><span class="num">01</span> Clauses &mdash; the skeleton</h2>
     <p class="intro">The building blocks of every query. Written in this order, but <em>run</em> in a different one (see section 08).</p>
@@ -297,6 +419,7 @@ LIMIT 10</pre></td>
     </table></div></div>
   </section>
 
+  <!-- 02 - Filtering operators: what goes inside WHERE / HAVING. -->
   <section id="filters">
     <h2><span class="num">02</span> Filtering operators</h2>
     <p class="intro">Live inside <code>WHERE</code> and <code>HAVING</code>. The boundary and NULL rules here caused most of your early bugs.</p>
@@ -348,6 +471,7 @@ AND salary &gt; 80000</pre></td>
     </table></div></div>
   </section>
 
+  <!-- 03 - Aggregate functions: many rows in, one number out. -->
   <section id="agg">
     <h2><span class="num">03</span> Aggregate functions</h2>
     <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
@@ -394,6 +518,7 @@ AND salary &gt; 80000</pre></td>
     </table></div></div>
   </section>
 
+  <!-- 04 - Joins: glue tables together side by side (add columns). -->
   <section id="joins">
     <h2><span class="num">04</span> Joins &mdash; combine tables side by side</h2>
     <p class="intro">Joins <b>add columns</b>. The <code>ON</code> is just a condition &mdash; usually a foreign key, but it can compare any columns.</p>
@@ -463,6 +588,8 @@ FROM employee a
 JOIN employee b
   ON a.department = b.department -- same department
   AND a.id <> b.id -- avoid self-pair
+  -- The a.id <> b.id condition is important.
+  -- Without it, every employee gets paired with themselves.
           </pre></td>
           <td class="miss">Needs a name and a query; can be referenced multiple times in the main query</td>
         </tr>
@@ -470,6 +597,7 @@ JOIN employee b
     </table></div></div>
   </section>
 
+  <!-- 05 - Stacking rows: UNION family, adds rows instead of columns. -->
   <section id="sets">
     <h2><span class="num">05</span> Stacking rows</h2>
     <p class="intro">Where joins add columns, these add <b>rows</b> &mdash; two result sets on top of each other. Both halves need the same column count and order.</p>
@@ -496,6 +624,7 @@ SELECT dept FROM b</pre></td>
     </table></div></div>
   </section>
 
+  <!-- 06 - Row-level functions: transform one value per row. -->
   <section id="rowfn">
     <h2><span class="num">06</span> Row-level functions</h2>
     <p class="intro">Transform a value <em>per row</em>. These clean, convert, and label your data &mdash; the daily work of data quality.</p>
@@ -556,6 +685,7 @@ SELECT dept FROM b</pre></td>
     </table></div></div>
   </section>
 
+  <!-- 07 - Counting a condition: the SUM(CASE...) / COUNT(CASE...) trick. -->
   <section id="count">
     <h2><span class="num">07</span> Counting a condition</h2>
     <p class="intro">SQL has no "count only the matching rows" function &mdash; you fake it by turning the condition into 1s and 0s, then summing. Three spellings, same answer.</p>
@@ -592,6 +722,9 @@ SELECT dept FROM b</pre></td>
     </table></div></div>
   </section>
 
+  <!-- 08 - Execution order. NOTE: this block is a <div class="callout">, not a
+       <section> - it gets the highlighted-box styling instead. The id="order"
+       still works as a TOC jump target. -->
   <div class="callout" id="order">
     <h2><span class="num">08</span> The key mental model &mdash; execution order</h2>
     <p style="margin:.2rem 0 .4rem;color:var(--muted)">You <em>write</em> the clauses in one order, but SQL <em>runs</em> them in another. This single fact explains most of the "why can't I&hellip;" bugs.</p>
@@ -610,6 +743,7 @@ SELECT dept FROM b</pre></td>
     </ul>
   </div>
 
+  <!-- 09 - Coming next: window functions + CTEs (not learned yet). -->
   <section id="next">
     <h2><span class="num">09</span> Coming next &mdash; advanced</h2>
     <p class="intro">Not learned yet. Window functions are the dividing line between "basic" and "pokro&#269;il&aacute; znalost SQL" &mdash; learn them next.</p>
@@ -652,8 +786,10 @@ SELECT * FROM ranked</pre></td>
     </table></div></div>
   </section>
 
+  <!-- FOOTER: two <span>s; the flexbox rule pushes them to opposite ends. -->
   <footer>
     <span>Your working reference &mdash; grows as you do.</span>
     <span class="mono">FROM &rarr; WHERE &rarr; GROUP BY &rarr; HAVING &rarr; SELECT &rarr; ORDER BY</span>
   </footer>
 </div>
+<!-- ============================ end .wrap ============================ -->
