@@ -135,6 +135,10 @@ body.resizing { cursor: col-resize; user-select: none; }
 .schema .sh b { font-size: 14px; }
 .schema .defs { margin: 0 0 16px; font: 12.5px/1.5 var(--f-body); color: var(--muted); }
 .schema .defs p { margin: 0 0 4px; }
+.schema .defs summary { cursor: pointer; color: var(--ink); font-weight: 600; margin-bottom: 4px; list-style: none; }
+.schema .defs summary::-webkit-details-marker { display: none; }
+.schema .defs summary::before { content: "▸ "; color: var(--muted); }
+.schema .defs[open] summary::before { content: "▾ "; }
 .schema .defs code { background: none; border: 0; padding: 0; }
 .dialog { position: fixed; z-index: 30; top: calc(60px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
   width: min(560px, calc(100% - 32px)); max-height: calc(100% - 90px); overflow-y: auto; background: var(--panel);
@@ -395,9 +399,10 @@ function renderList() {
 function renderSchema() {
   const db = state.db;
   const ref = (n) => { const m = /→ (\w+)/.exec(n); return m ? '→ ' + m[1].replace(/\.\w+$/, '') : ''; };
-  $('dbody').innerHTML = `<div class="defs">${db.notes.map((n) => `<p>${n}</p>`).join('')}</div>` +
+  $('dbody').innerHTML = `<details class="defs" id="defsBox"${store.get('notesOpen', true) ? ' open' : ''}><summary>Notes</summary>${db.notes.map((n) => `<p>${n}</p>`).join('')}</details>` +
     db.schema.map((t) => `<table data-t="${t.table}"><thead><tr><th colspan="2">${t.table}</th></tr></thead><tbody>${t.cols.map((c) =>
       `<tr data-c="${c.c}"><td>${c.c}</td><td>${ref(c.n) || c.t.toLowerCase().replace(/\(.*\)/, '')}</td></tr>`).join('')}</tbody></table>`).join('');
+  $('defsBox').addEventListener('toggle', (e) => store.set('notesOpen', e.target.open));
   filterTables();
 }
 
