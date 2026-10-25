@@ -388,7 +388,7 @@ function renderList() {
       <span class="tick">${solved.has(key(i)) ? '✓' : ''}</span>
     </button></li>`).join('') : '<li class="empty-list">No questions match these filters.</li>';
   const n = state.db.questions.length, done = state.db.questions.filter((_, i) => solved.has(key(i))).length;
-  $('metertxt').textContent = `${done} / ${n}`;
+  $('metertxt').textContent = `${done} / ${n} · ${Math.round(100 * done / n)}%`;
   $('meterbar').style.width = (100 * done / n) + '%';
 }
 
