@@ -474,7 +474,7 @@ function openQuestion(i) {
       </div>
       <textarea id="sql" spellcheck="false" aria-label="SQL editor" placeholder="SELECT ...">${esc(draft)}</textarea>
     </div>
-    <div class="results" id="results"><div class="verdict info"><span class="tag">Ready</span><p>Write a query, then Run to see your rows or Submit to check them.</p></div></div>`;
+    <div class="results" id="results"></div>`;
   const cm = CodeMirror.fromTextArea($('sql'), {
     mode: 'text/x-pgsql', lineNumbers: true, matchBrackets: true, indentUnit: 2, tabSize: 2, viewportMargin: Infinity,
     extraKeys: {
