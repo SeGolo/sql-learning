@@ -81,9 +81,6 @@ select { background: var(--panel); border: 1px solid var(--line); border-radius:
 .empty-list { padding: 16px; color: var(--muted); font-size: 14px; }
 
 .work { min-width: 0; padding-block: 20px 48px; padding-left: 24px; padding-right: max(16px, env(safe-area-inset-right, 0px)); display: grid; gap: 16px; align-content: start; max-width: 1100px; }
-.qhead { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 14px; }
-.qhead h1 { margin: 0; font: 600 26px/1.15 var(--f-display); text-wrap: balance; }
-.qhead .meta { display: flex; gap: 10px; align-items: baseline; font: 500 12px var(--f-mono); color: var(--muted); }
 .prompt { margin: 0; max-width: 72ch; font-size: 16px; }
 .reveal { display: flex; gap: 8px; flex-wrap: wrap; }
 details.box { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); }
@@ -125,6 +122,9 @@ textarea#sql { display: block; width: 100%; min-height: 200px; resize: vertical;
 
 /* Schema: pinned right column on wide screens, slide-over on narrow ones. Deliberately plain. */
 .shell.pinned { grid-template-columns: 300px minmax(0, 1fr) var(--schema-w, 364px); }
+.shell.noside { grid-template-columns: minmax(0, 1fr); }
+.shell.noside.pinned { grid-template-columns: minmax(0, 1fr) var(--schema-w, 364px); }
+.shell.noside .side { display: none; }
 .resizer { position: absolute; top: 0; bottom: 0; left: -3px; width: 7px; cursor: col-resize; z-index: 2; }
 .resizer:hover, .resizer.drag { background: var(--line); }
 body.resizing { cursor: col-resize; user-select: none; }
@@ -162,6 +162,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 .scrim { position: fixed; inset: 0; z-index: 15; background: rgba(10, 16, 22, .35); }
 @media (max-width: 1200px) {
   .shell.pinned { grid-template-columns: 300px minmax(0, 1fr); }
+  .shell.noside.pinned { grid-template-columns: minmax(0, 1fr); }
   .schema { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; height: auto; width: min(442px, 100%);
     padding-top: calc(16px + env(safe-area-inset-top, 0px)); box-shadow: -12px 0 40px rgba(0,0,0,.18); }
 }
@@ -206,6 +207,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
   <div class="grow"></div>
   <div class="meter" title="Solved questions in this database"><div class="bar"><i id="meterbar"></i></div><span id="metertxt">0 / 0</span></div>
   <span class="pill" id="engine">Loading PostgreSQL…</span>
+  <button class="btn" id="sideBtn" type="button" aria-pressed="true">Questions</button>
   <button class="btn" id="progBtn" type="button">Progress</button>
   <button class="btn" id="schemaBtn" type="button">Schema</button>
 </header>
@@ -428,11 +430,7 @@ function gridHtml(res, diffRow = -1, limit = 500) {
 // Theory card: write your own answer, then compare with the model answer. No auto-check.
 function openTheory(i, q, n, draft) {
   $('work').innerHTML = `
-    <div class="qhead">
-      <h1>${i + 1}. ${esc(q.t)}</h1>
-      <div class="meta"><span class="diff ${q.d}">${q.d}</span><span>Theory</span>${solved.has(key(i)) ? '<span style="color:var(--ok)">✓ done</span>' : ''}</div>
-    </div>
-    <p class="prompt">${esc(q.p)}</p>
+    <p class="prompt"><b>${i + 1}.</b> ${esc(q.p)}</p>
     <p class="prompt" style="font-size:13.5px;color:var(--muted)">Interview question with no query. Answer in your own words first, then open the model answer.</p>
     <div class="nav">
       <button class="btn" type="button" id="prevBtn" ${i === 0 ? 'disabled' : ''}>← Previous</button>
@@ -457,11 +455,7 @@ function openQuestion(i) {
   const draft = store.get('draft.' + key(i), '');
   if (q.k === 'theory') return openTheory(i, q, n, draft);
   $('work').innerHTML = `
-    <div class="qhead">
-      <h1>${i + 1}. ${esc(q.t)}</h1>
-      <div class="meta"><span class="diff ${q.d}">${q.d}</span><span>${esc(q.g)}</span>${solved.has(key(i)) ? '<span style="color:var(--ok)">✓ solved</span>' : ''}</div>
-    </div>
-    <p class="prompt">${q.p}</p>
+    <p class="prompt"><b>${i + 1}.</b> ${q.p}</p>
     <p class="prompt" style="font-size:13.5px;color:var(--muted)">${q.o ? 'Row order matters: sort as asked.' : 'Rows can be in any order.'} Column names don't need to match; values and column order do.</p>
     <div class="helpers">
       <details class="box"><summary>Hint</summary><div class="in"><div>${esc(q.h)}</div></div></details>
@@ -577,7 +571,6 @@ function check() {
     $('results').innerHTML = head +
       `<div class="rtitle">Your result <span>${mine.rows.length} rows</span></div>${gridHtml(mine, v.ok ? -1 : (v.row ?? -1))}` +
       (v.ok ? '' : `<details class="box"><summary>Show expected result (${exp.rows.length} rows)</summary><div class="in">${gridHtml(exp, v.row ?? -1)}</div></details>`);
-    if (v.ok) { const meta = document.querySelector('.qhead .meta'); if (meta && !meta.textContent.includes('solved')) meta.insertAdjacentHTML('beforeend', '<span style="color:var(--ok)">✓ solved</span>'); }
   });
 }
 
@@ -603,6 +596,12 @@ const drawer = (open) => {
   store.set('schemaOpen', open);
 };
 $('schemaBtn').onclick = () => drawer($('drawer').hidden);
+const side = (open) => {
+  document.querySelector('.shell').classList.toggle('noside', !open);
+  $('sideBtn').setAttribute('aria-pressed', open);
+  store.set('sideOpen', open);
+};
+$('sideBtn').onclick = () => side(document.querySelector('.shell').classList.contains('noside'));
 
 // ---------- progress export / import (code = base64 of JSON: solved list + drafts) ----------
 function draftKeys() {
@@ -654,6 +653,7 @@ $('closeDrawer').onclick = () => drawer(false);
 $('scrim').onclick = () => { if (!$('progDlg').hidden) closeProgress(); else drawer(false); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wide()) drawer(false); });
 drawer(wide() && store.get('schemaOpen', true));
+side(store.get('sideOpen', true));
 
 // Drag the schema panel's left edge to resize it.
 const setSchemaW = (w) => document.querySelector('.shell').style.setProperty('--schema-w', w + 'px');
