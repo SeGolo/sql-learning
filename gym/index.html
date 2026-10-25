@@ -465,7 +465,6 @@ function openQuestion(i) {
   if (q.k === 'theory') return openTheory(i, q, n, draft);
   $('work').innerHTML = `
     <p class="prompt"><b>${i + 1}.</b> ${q.p}</p>
-    <p class="prompt" style="font-size:13.5px;color:var(--muted)">${q.o ? 'Row order matters: sort as asked.' : 'Rows can be in any order.'} Column names don't need to match; values and column order do.</p>
     <div class="helpers">
       <details class="box"><summary>Hint</summary><div class="in"><div>${esc(q.h)}</div></div></details>
       <details class="box" id="solbox"><summary>Solution</summary><div class="in"><pre class="sol">${esc(q.s)}</pre>
