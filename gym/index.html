@@ -145,6 +145,16 @@ body.resizing { cursor: col-resize; user-select: none; }
 .schema .defs { margin: 0 0 16px; font: 12.5px/1.5 var(--f-body); color: var(--muted); }
 .schema .defs p { margin: 0 0 4px; }
 .schema .defs code { background: none; border: 0; padding: 0; }
+.dialog { position: fixed; z-index: 30; top: calc(60px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  width: min(560px, calc(100% - 32px)); max-height: calc(100% - 90px); overflow-y: auto; background: var(--panel);
+  border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 12px 40px rgba(0,0,0,.25); padding: 16px; display: grid; gap: 14px; }
+.dialog .dh { display: flex; justify-content: space-between; align-items: center; }
+.dialog h3 { margin: 0 0 4px; font: 600 14px var(--f-body); }
+.dialog p { margin: 0 0 6px; font-size: 13.5px; color: var(--muted); }
+.dialog textarea { width: 100%; height: 84px; resize: vertical; font: 12px/1.4 var(--f-mono); border: 1px solid var(--line); border-radius: var(--r); padding: 6px 8px; background: var(--sunk); word-break: break-all; }
+.dialog .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 6px; }
+.dialog .muted { font-size: 13px; color: var(--muted); }
+.dialog .muted.ok { color: var(--ok); } .dialog .muted.bad { color: var(--bad); }
 textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical; border: 0; padding: 12px 14px; background: var(--panel); font: 15px/1.55 var(--f-body); outline: none; }
 .model { white-space: pre-wrap; max-width: 75ch; font-size: 15px; }
 #tfilter { width: 100%; margin: 0 0 12px; padding: 5px 8px; border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); font: 13px var(--f-mono); }
@@ -201,8 +211,25 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
   <div class="grow"></div>
   <div class="meter" title="Solved questions in this database"><div class="bar"><i id="meterbar"></i></div><span id="metertxt">0 / 0</span></div>
   <span class="pill" id="engine">Loading PostgreSQL…</span>
+  <button class="btn" id="progBtn" type="button">Progress</button>
   <button class="btn" id="schemaBtn" type="button">Schema</button>
 </header>
+
+<div class="dialog" id="progDlg" hidden role="dialog" aria-label="Move progress between laptops">
+  <div class="dh"><b>Move progress between laptops</b><button class="linkbtn" id="progClose" type="button">Close</button></div>
+  <section>
+    <h3>1. Export from this laptop</h3>
+    <p>Copy this code and bring it to the other laptop (email, chat, note).</p>
+    <textarea id="expCode" readonly aria-label="Progress code"></textarea>
+    <div class="row"><button class="btn" id="expCopy" type="button">Copy code</button><span id="expInfo" class="muted"></span></div>
+  </section>
+  <section>
+    <h3>2. Import on the other laptop</h3>
+    <p>Paste a code here. Solved questions from both laptops are combined; nothing is removed.</p>
+    <textarea id="impCode" aria-label="Paste progress code" placeholder="Paste code here"></textarea>
+    <div class="row"><button class="btn primary" id="impBtn" type="button">Merge into this laptop</button><span id="impInfo" class="muted"></span></div>
+  </section>
+</div>
 
 <div class="shell">
   <aside class="side" aria-label="Questions">
@@ -580,8 +607,55 @@ const drawer = (open) => {
   store.set('schemaOpen', open);
 };
 $('schemaBtn').onclick = () => drawer($('drawer').hidden);
+
+// ---------- progress export / import (code = base64 of JSON: solved list + drafts) ----------
+function draftKeys() {
+  const out = {};
+  try { for (let k = 0; k < localStorage.length; k++) { const n = localStorage.key(k); if (n.startsWith('sqlgym.draft.')) out[n.slice(13)] = JSON.parse(localStorage.getItem(n)); } } catch {}
+  return out;
+}
+const toB64 = (s) => { const u = new TextEncoder().encode(s); let b = ''; for (let k = 0; k < u.length; k += 8192) b += String.fromCharCode(...u.subarray(k, k + 8192)); return btoa(b); };
+const fromB64 = (b) => new TextDecoder().decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
+function openProgress() {
+  const drafts = Object.fromEntries(Object.entries(draftKeys()).filter(([, v]) => v && v.trim()));
+  $('expCode').value = 'SQLGYM1:' + toB64(JSON.stringify({ solved: [...solved], drafts }));
+  $('expInfo').textContent = `${solved.size} solved, ${Object.keys(drafts).length} drafts`; $('expInfo').className = 'muted';
+  $('impInfo').textContent = ''; $('impCode').value = '';
+  $('progDlg').hidden = false; $('scrim').hidden = false;
+}
+const closeProgress = () => { $('progDlg').hidden = true; $('scrim').hidden = !(!$('drawer').hidden && !wide()); };
+$('progBtn').onclick = openProgress;
+$('progClose').onclick = closeProgress;
+$('expCopy').onclick = () => {
+  const ta = $('expCode');
+  navigator.clipboard.writeText(ta.value).then(() => { $('expInfo').textContent = 'Copied.'; },
+    () => { ta.focus(); ta.select(); $('expInfo').textContent = 'Press Ctrl+C to copy the selected code.'; });
+};
+$('impBtn').onclick = () => {
+  const info = $('impInfo');
+  try {
+    const raw = $('impCode').value.trim();
+    if (!raw.startsWith('SQLGYM1:')) throw new Error('This is not a SQL Gym progress code.');
+    const data = JSON.parse(fromB64(raw.slice(8)));
+    const before = solved.size;
+    (data.solved || []).forEach((k) => solved.add(k));
+    store.set('solved', [...solved]);
+    let added = 0;
+    for (const [k, v] of Object.entries(data.drafts || {})) {
+      const mine = store.get('draft.' + k, '');
+      if (!mine || !mine.trim()) { store.set('draft.' + k, v); added++; }
+    }
+    info.textContent = `Merged: ${solved.size - before} new solved questions, ${added} drafts added (your own drafts were kept).`;
+    info.className = 'muted ok';
+    renderList(); if (state.pg) openQuestion(state.idx);
+  } catch (e) {
+    info.textContent = 'Could not read the code: ' + (e.message || e) + ' Copy the whole code, including SQLGYM1:.';
+    info.className = 'muted bad';
+  }
+};
 $('tfilter').oninput = filterTables;
-$('closeDrawer').onclick = $('scrim').onclick = () => drawer(false);
+$('closeDrawer').onclick = () => drawer(false);
+$('scrim').onclick = () => { if (!$('progDlg').hidden) closeProgress(); else drawer(false); };
 document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wide()) drawer(false); });
 drawer(wide() && store.get('schemaOpen', true));
 
