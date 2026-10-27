@@ -118,7 +118,10 @@ textarea#sql { display: block; width: 100%; min-height: 200px; resize: vertical;
 .grid td.num { text-align: right; }
 .grid td.nul { color: var(--null); font-style: italic; }
 .grid tr.diffrow td { background: var(--bad-soft); }
-.nav { display: flex; gap: 8px; justify-content: space-between; }
+.nav { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
+.rate { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; font: 500 12px var(--f-mono); color: var(--muted); }
+.rate .lbl { margin-right: 4px; }
+.rate .chip { min-width: 28px; padding: 2px 6px; }
 
 /* Schema: pinned right column on wide screens, slide-over on narrow ones. Deliberately plain. */
 .shell.pinned { grid-template-columns: 300px minmax(0, 1fr) var(--schema-w, 364px); }
@@ -278,6 +281,7 @@ const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&l
 const store = {
   get(k, d) { try { const v = localStorage.getItem('sqlgym.' + k); return v === null ? d : JSON.parse(v); } catch { return d; } },
   set(k, v) { try { localStorage.setItem('sqlgym.' + k, JSON.stringify(v)); } catch {} },
+  del(k) { try { localStorage.removeItem('sqlgym.' + k); } catch {} },
 };
 let solved = new Set(store.get('solved', []));
 
@@ -428,6 +432,21 @@ function gridHtml(res, diffRow = -1, limit = 500) {
   return `<div class="grid"><table><thead><tr>${res.cols.map((c) => `<th>${esc(c)}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table></div>`;
 }
 
+// Usefulness rating 1-10 per question; click the chosen number again to clear it.
+function rateHtml(i) {
+  const r = store.get('rate.' + key(i), 0);
+  return `<div class="rate" id="rate" role="group" aria-label="How useful was this question"><span class="lbl">Useful?</span>${
+    Array.from({ length: 10 }, (_, k) => `<button class="chip" type="button" data-r="${k + 1}" aria-pressed="${r === k + 1}">${k + 1}</button>`).join('')}</div>`;
+}
+function wireRate(i) {
+  $('rate').onclick = (e) => {
+    const b = e.target.closest('[data-r]'); if (!b) return;
+    const r = +b.dataset.r === store.get('rate.' + key(i), 0) ? 0 : +b.dataset.r;
+    r ? store.set('rate.' + key(i), r) : store.del('rate.' + key(i));
+    $('rate').querySelectorAll('[data-r]').forEach((c) => c.setAttribute('aria-pressed', +c.dataset.r === r));
+  };
+}
+
 // Theory card: write your own answer, then compare with the model answer. No auto-check.
 function openTheory(i, q, n, draft) {
   $('work').innerHTML = `
@@ -435,6 +454,7 @@ function openTheory(i, q, n, draft) {
     <p class="prompt" style="font-size:13.5px;color:var(--muted)">Interview question with no query. Answer in your own words first, then open the model answer.</p>
     <div class="nav">
       <button class="btn" type="button" id="prevBtn" ${i === 0 ? 'disabled' : ''}>← Previous</button>
+      ${rateHtml(i)}
       <button class="btn" type="button" id="nextBtn" ${i === n - 1 ? 'disabled' : ''}>Next →</button>
     </div>
     <div class="editor"><div class="bar"><span class="lbl">your answer</span>
@@ -444,6 +464,7 @@ function openTheory(i, q, n, draft) {
   const ta = $('ans');
   ta.addEventListener('input', () => store.set('draft.' + key(i), ta.value));
   $('doneBtn').onclick = () => { solved.add(key(i)); store.set('solved', [...solved]); renderList(); openQuestion(i); };
+  wireRate(i);
   $('prevBtn').onclick = () => openQuestion(i - 1);
   $('nextBtn').onclick = () => openQuestion(i + 1);
   renderList();
@@ -464,6 +485,7 @@ function openQuestion(i) {
     </div>
     <div class="nav">
       <button class="btn" type="button" id="prevBtn" ${i === 0 ? 'disabled' : ''}>← Previous</button>
+      ${rateHtml(i)}
       <button class="btn" type="button" id="nextBtn" ${i === n - 1 ? 'disabled' : ''}>Next →</button>
     </div>
     <div class="editor">
@@ -491,6 +513,7 @@ function openQuestion(i) {
   $('runBtn').onclick = run; $('checkBtn').onclick = check;
   $('clearBtn').onclick = () => { cm.setValue(''); cm.focus(); };
   $('useSol').onclick = () => { cm.setValue(q.s); cm.focus(); };
+  wireRate(i);
   $('prevBtn').onclick = () => openQuestion(i - 1);
   $('nextBtn').onclick = () => openQuestion(i + 1);
   renderList();
@@ -603,18 +626,20 @@ const side = (open) => {
 };
 $('sideBtn').onclick = () => side(document.querySelector('.shell').classList.contains('noside'));
 
-// ---------- progress export / import (code = base64 of JSON: solved list + drafts) ----------
-function draftKeys() {
-  const out = {};
-  try { for (let k = 0; k < localStorage.length; k++) { const n = localStorage.key(k); if (n.startsWith('sqlgym.draft.')) out[n.slice(13)] = JSON.parse(localStorage.getItem(n)); } } catch {}
+// ---------- progress export / import (code = base64 of JSON: solved list + drafts + ratings) ----------
+function storedKeys(prefix) {
+  const out = {}, p = 'sqlgym.' + prefix;
+  try { for (let k = 0; k < localStorage.length; k++) { const n = localStorage.key(k); if (n.startsWith(p)) out[n.slice(p.length)] = JSON.parse(localStorage.getItem(n)); } } catch {}
   return out;
 }
+const draftKeys = () => storedKeys('draft.');
 const toB64 = (s) => { const u = new TextEncoder().encode(s); let b = ''; for (let k = 0; k < u.length; k += 8192) b += String.fromCharCode(...u.subarray(k, k + 8192)); return btoa(b); };
 const fromB64 = (b) => new TextDecoder().decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
 function openProgress() {
   const drafts = Object.fromEntries(Object.entries(draftKeys()).filter(([, v]) => v && v.trim()));
-  $('expCode').value = 'SQLGYM1:' + toB64(JSON.stringify({ solved: [...solved], drafts }));
-  $('expInfo').textContent = `${solved.size} solved, ${Object.keys(drafts).length} drafts`; $('expInfo').className = 'muted';
+  const ratings = storedKeys('rate.');
+  $('expCode').value = 'SQLGYM1:' + toB64(JSON.stringify({ solved: [...solved], drafts, ratings }));
+  $('expInfo').textContent = `${solved.size} solved, ${Object.keys(drafts).length} drafts, ${Object.keys(ratings).length} ratings`; $('expInfo').className = 'muted';
   $('impInfo').textContent = ''; $('impCode').value = '';
   $('progDlg').hidden = false; $('scrim').hidden = false;
 }
@@ -640,7 +665,11 @@ $('impBtn').onclick = () => {
       const mine = store.get('draft.' + k, '');
       if (!mine || !mine.trim()) { store.set('draft.' + k, v); added++; }
     }
-    info.textContent = `Merged: ${solved.size - before} new solved questions, ${added} drafts added (your own drafts were kept).`;
+    let rated = 0;
+    for (const [k, v] of Object.entries(data.ratings || {})) {
+      if (!store.get('rate.' + k, 0)) { store.set('rate.' + k, v); rated++; }
+    }
+    info.textContent = `Merged: ${solved.size - before} new solved questions, ${added} drafts and ${rated} ratings added (your own were kept).`;
     info.className = 'muted ok';
     renderList(); if (state.pg) openQuestion(state.idx);
   } catch (e) {
