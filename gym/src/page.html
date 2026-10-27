@@ -120,7 +120,6 @@ textarea#sql { display: block; width: 100%; min-height: 200px; resize: vertical;
 .grid tr.diffrow td { background: var(--bad-soft); }
 .nav { display: flex; gap: 8px; justify-content: space-between; align-items: center; flex-wrap: wrap; }
 .rate { display: flex; gap: 4px; align-items: center; flex-wrap: wrap; font: 500 12px var(--f-mono); color: var(--muted); }
-.rate .lbl { margin-right: 4px; }
 .rate .chip { min-width: 28px; padding: 2px 6px; }
 
 /* Schema: pinned right column on wide screens, slide-over on narrow ones. Deliberately plain. */
@@ -435,7 +434,7 @@ function gridHtml(res, diffRow = -1, limit = 500) {
 // Usefulness rating 1-10 per question; click the chosen number again to clear it.
 function rateHtml(i) {
   const r = store.get('rate.' + key(i), 0);
-  return `<div class="rate" id="rate" role="group" aria-label="How useful was this question"><span class="lbl">Useful?</span>${
+  return `<div class="rate" id="rate" role="group" aria-label="How useful was this question">${
     Array.from({ length: 10 }, (_, k) => `<button class="chip" type="button" data-r="${k + 1}" aria-pressed="${r === k + 1}">${k + 1}</button>`).join('')}</div>`;
 }
 function wireRate(i) {
