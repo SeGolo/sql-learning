@@ -276,9 +276,10 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 import { PGlite } from './pglite/index.js';
 import velo from './velo.js';
 import ace from './ace.js';
+import pulse from './pulse.js';
 
-const DBS = [velo, ace];
-const PLANNED = ['Batch 3', 'Batch 4', 'Batch 5'];
+const DBS = [velo, pulse, ace];
+const PLANNED = ['Batch 4', 'Batch 5'];
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 

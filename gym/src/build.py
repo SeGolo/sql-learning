@@ -1,9 +1,12 @@
-"""Build site/: data module per database + copy of PGlite runtime."""
-import json, shutil, os, importlib
+"""Build site/: data module per database + copy of PGlite runtime.
+Usage: python build.py            (everything)
+       python build.py pulse      (only the listed databases)"""
+import json, shutil, os, sys, importlib
 
+ONLY = sys.argv[1:]
 os.makedirs('site/pglite', exist_ok=True)
 src = 'pgl/package/dist/'
-for f in os.listdir(src):
+for f in (os.listdir(src) if os.path.isdir(src) else []):
     if f in ('index.js', 'postgres.wasm', 'postgres.data') or (f.startswith('chunk-') and f.endswith('.js')):
         shutil.copy(src + f, 'site/pglite/' + f)
 
@@ -55,6 +58,7 @@ NOTES_VELO = [
 ]
 
 def build(dbid, name, tagline, sql_file, qmod, schema, notes):
+    if ONLY and dbid not in ONLY: return
     mods = qmod if isinstance(qmod, (list, tuple)) else [qmod]
     for m in mods: importlib.import_module(m)
     Q = importlib.import_module(mods[0]).Q
@@ -69,7 +73,70 @@ def build(dbid, name, tagline, sql_file, qmod, schema, notes):
 build('velo', 'Velo e-shop', 'Czech bike & outdoor e-shop: customers, orders, payments, reviews',
       'db1.sql', ['questions_db1', 'traps_db1'], SCHEMA_VELO, NOTES_VELO)
 
+# ---------- DB3: Pulse fitness app (marketing + subscriptions + money) ----------
+SCHEMA_PULSE = [
+    ('channels', 'Where traffic comes from.', [
+        ('channel_id', 'INT', 'primary key'), ('name', 'VARCHAR', ''),
+        ('kind', 'VARCHAR', 'paid or organic')]),
+    ('campaigns', 'Paid campaigns.', [
+        ('campaign_id', 'INT', 'primary key'), ('channel_id', 'INT', '→ channels.channel_id'),
+        ('name', 'VARCHAR', ''), ('start_date', 'DATE', 'planned first day'),
+        ('end_date', 'DATE', 'planned last day; NULL = no end planned'),
+        ('daily_budget_eur', 'NUMERIC(10,2)', '')]),
+    ('ad_spend', 'One row per campaign per day, from the ad platforms. Missing day = paused.', [
+        ('campaign_id', 'INT', '→ campaigns.campaign_id'), ('spend_date', 'DATE', ''),
+        ('impressions', 'INT', ''), ('clicks', 'INT', ''), ('spend_eur', 'NUMERIC(10,2)', '')]),
+    ('visits', 'Website sessions of visitors who accepted cookies (far fewer than ad clicks).', [
+        ('visit_id', 'INT', 'primary key'), ('visitor_id', 'INT', 'one browser = one person'),
+        ('visit_ts', 'TIMESTAMP', ''), ('channel_id', 'INT', '→ channels.channel_id'),
+        ('campaign_id', 'INT', '→ campaigns.campaign_id; NULL for organic visits'),
+        ('device', 'VARCHAR', 'mobile, desktop, tablet')]),
+    ('users', 'Everyone who created an account.', [
+        ('user_id', 'INT', 'primary key'), ('visitor_id', 'INT', '→ visits.visitor_id; NULL = installed from the app store'),
+        ('signup_ts', 'TIMESTAMP', ''), ('country', 'VARCHAR', 'ISO code: CZ, SK, PL, DE, AT, GB'),
+        ('platform', 'VARCHAR', 'web, ios, android'), ('is_test', 'BOOLEAN', 'staff test account')]),
+    ('plans', 'What we sell. Prices are the EUR list price.', [
+        ('plan_id', 'INT', 'primary key'), ('name', 'VARCHAR', ''),
+        ('billing_period', 'VARCHAR', 'month or year'), ('price_eur', 'NUMERIC(10,2)', 'price per billing period'),
+        ('is_active', 'BOOLEAN', 'FALSE = retired, no new sales')]),
+    ('subscriptions', 'One row per subscription. A user can have several (plan switch, coming back).', [
+        ('subscription_id', 'INT', 'primary key'), ('user_id', 'INT', '→ users.user_id'),
+        ('plan_id', 'INT', '→ plans.plan_id'), ('started_at', 'DATE', ''),
+        ('trial_end', 'DATE', 'first paid day after a 7-day trial; NULL = no trial'),
+        ('ended_at', 'DATE', 'first day without access; NULL = not cancelled'),
+        ('cancel_reason', 'VARCHAR', 'NULL when not given')]),
+    ('invoices', "Charges, in the customer's currency.", [
+        ('invoice_id', 'INT', 'primary key'), ('subscription_id', 'INT', '→ subscriptions.subscription_id'),
+        ('invoice_date', 'DATE', ''), ('period_start', 'DATE', ''), ('period_end', 'DATE', 'last day covered'),
+        ('currency', 'CHAR(3)', 'EUR, CZK, PLN, GBP'), ('amount', 'NUMERIC(10,2)', 'in currency'),
+        ('status', 'VARCHAR', 'paid, failed, void')]),
+    ('refunds', 'Money paid back. One invoice can have several refunds.', [
+        ('refund_id', 'INT', 'primary key'), ('invoice_id', 'INT', '→ invoices.invoice_id'),
+        ('refund_date', 'DATE', ''), ('amount', 'NUMERIC(10,2)', 'in the invoice currency'),
+        ('reason', 'VARCHAR', 'full or partial')]),
+    ('fx_rates', 'ECB-style rates, business days only.', [
+        ('rate_date', 'DATE', ''), ('currency', 'CHAR(3)', 'CZK, PLN, GBP (no EUR rows)'),
+        ('units_per_eur', 'NUMERIC(10,4)', 'units of currency for 1 EUR')]),
+    ('workouts', 'Training sessions logged in the app. Kept for 1 Apr – 30 Jun 2025 only.', [
+        ('workout_id', 'INT', 'primary key'), ('user_id', 'INT', '→ users.user_id'),
+        ('started_at', 'TIMESTAMP', ''), ('kind', 'VARCHAR', 'run, strength, yoga, ride, hiit'),
+        ('duration_min', 'INT', 'NULL when the tracker failed')]),
+]
+NOTES_PULSE = [
+    '<b>Today</b> is 30 June 2025 (the data snapshot). Data starts 1 Jan 2024.',
+    '<b>Test accounts</b> (<code>users.is_test</code>) are staff. They never count in business numbers.',
+    '<b>Active</b> subscription on day D: <code>started_at &lt;= D AND (ended_at IS NULL OR ended_at &gt; D)</code>. <b>In trial</b> on D: D &lt; trial_end. <b>Paying</b> on D: active and not in trial.',
+    '<b>Paying customer</b> = a user with at least one paid invoice.',
+    '<b>Revenue</b> = paid invoices minus refunds, in EUR. Each amount uses the rate valid on its own date (invoice_date or refund_date): the latest rate on or before that date. EUR = amount / units_per_eur; EUR itself has rate 1.',
+    '<b>MRR</b> on D = sum of plan <code>price_eur</code> over subscriptions paying on D; annual plans count price / 12.',
+    "<b>First touch</b> = channel of the person's earliest visit. <b>Last touch</b> = their latest visit at or before signup. Users without visitor_id came from the App Store (channel 9).",
+    '<b>Active user</b> in a period = logged at least one workout in it.',
+]
+build('pulse', 'Pulse fitness app', 'Subscription app with paid marketing: ads, visits, trials, invoices in 4 currencies, refunds, workouts',
+      'db3.sql', ['questions_db3', 'traps_db3'], SCHEMA_PULSE, NOTES_PULSE)
+
 # ---------- DB2: schema read from a real Postgres load ----------
+if ONLY and 'ace' not in ONLY: sys.exit()
 import pgserver, psycopg
 srv = pgserver.get_server('pgdata', cleanup_mode='stop')
 conn = psycopg.connect(srv.get_uri(), autocommit=True)
