@@ -338,12 +338,22 @@ async function loadDb(db) {
   state.expected.clear();
   $('engine').hidden = true;
   renderSchema(); renderList(); openQuestion(startIndex());
+  centerCurrent();
+}
+
+// Put the open question in the middle of the list (page load and database switch).
+function centerCurrent() {
+  const list = $('qlist'), cur = list.querySelector('[aria-current="true"]');
+  if (!cur) return;
+  const top = cur.getBoundingClientRect().top - list.getBoundingClientRect().top + list.scrollTop;
+  list.scrollTop = top - (list.clientHeight - cur.offsetHeight) / 2;
 }
 
 function startIndex() {
   const m = /^#?q(\d+)$/.exec(location.hash);
   if (m) { const n = +m[1] - 1; if (n >= 0 && n < state.db.questions.length) return n; }
-  return store.get('last.' + state.db.id, 0);
+  const next = state.db.questions.findIndex((_, i) => !solved.has(key(i)));
+  return next >= 0 ? next : store.get('last.' + state.db.id, 0);
 }
 
 // Run SQL without letting it change the data.
