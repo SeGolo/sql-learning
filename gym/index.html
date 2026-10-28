@@ -211,14 +211,14 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 </style>
 
 <header class="top">
-  <div class="brand">SQL Gym <b>500</b> <small>PostgreSQL 16</small></div>
-  <label class="dbpick" for="db">Database
-    <select id="db"></select>
+  <div class="brand">SQL Gym <b>500</b></div>
+  <button class="btn" id="sideBtn" type="button" aria-pressed="true">Questions</button>
+  <label class="dbpick" for="db">
+    <select id="db" aria-label="Database"></select>
   </label>
   <div class="grow"></div>
   <div class="meter" title="Solved questions in this database"><div class="bar"><i id="meterbar"></i></div><span id="metertxt">0 / 0</span></div>
   <span class="pill" id="engine">Loading PostgreSQL…</span>
-  <button class="btn" id="sideBtn" type="button" aria-pressed="true">Questions</button>
   <button class="btn" id="progBtn" type="button">Progress</button>
   <button class="btn" id="schemaBtn" type="button">Schema</button>
 </header>
