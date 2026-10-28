@@ -184,19 +184,23 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
     padding-top: calc(16px + env(safe-area-inset-top, 0px)); box-shadow: -12px 0 40px rgba(0,0,0,.18); }
 }
 
-/* Diagram: full-screen table boxes with FK lines, boxes draggable. */
-.erd { position: fixed; inset: 0; z-index: 40; background: var(--bg); display: flex; flex-direction: column; }
-.erd .eh { display: flex; align-items: center; gap: 14px; padding: 10px max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
-  padding-top: calc(10px + env(safe-area-inset-top, 0px)); background: var(--panel); border-bottom: 1px solid var(--line); font-size: 13px; color: var(--muted); }
-.erd .eh b { color: var(--ink); font-size: 14px; }
-.erd .eh .grow { flex: 1; }
-.erd .scroll { flex: 1; overflow: auto; }
-.erd .canvas { position: relative; }
-.erd svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
-.erd path { fill: none; stroke: var(--muted); stroke-width: 1.4; opacity: .55; }
-.erd path.hot { stroke: var(--accent); stroke-width: 2.2; opacity: 1; }
-.erd circle { fill: var(--muted); opacity: .55; }
-.erd circle.hot { fill: var(--accent); opacity: 1; }
+/* Diagram mode of the schema panel: table boxes with FK lines, boxes draggable, zoomable. */
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: var(--r); overflow: hidden; }
+.seg button { border: 0; background: var(--panel); padding: 4px 12px; cursor: pointer; font: 500 13px var(--f-body); color: var(--muted); }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.schema.diagram { overflow: auto; }
+.ezoom { display: flex; gap: 6px; align-items: center; margin: 0 0 10px; font-family: var(--f-body); }
+.ezoom .btn { padding: 2px 10px; font-size: 13px; }
+.ezoom .grow { flex: 1; }
+.ewrap { position: relative; }
+.ecanvas { position: absolute; left: 0; top: 0; transform-origin: 0 0; }
+.ecanvas svg { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+.ecanvas path { fill: none; stroke: var(--muted); stroke-width: 1.4; opacity: .55; }
+.ecanvas path.hot { stroke: var(--accent); stroke-width: 2.2; opacity: 1; }
+.ecanvas circle { fill: var(--muted); opacity: .55; }
+.ecanvas circle.hot { fill: var(--accent); opacity: 1; }
+.enote { font: 12.5px/1.5 var(--f-body); color: var(--muted); margin: 0 0 10px; }
 .ebox { position: absolute; background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 2px 8px rgba(0,0,0,.08);
   font: 12.5px/1.25 var(--f-mono); min-width: 170px; user-select: none; }
 .ebox.hot { border-color: var(--accent); }
@@ -254,15 +258,8 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
   <div class="meter" title="Solved questions in this database"><div class="bar"><i id="meterbar"></i></div><span id="metertxt">0 / 0</span></div>
   <span class="pill" id="engine">Loading PostgreSQL…</span>
   <button class="btn" id="progBtn" type="button">Progress</button>
-  <button class="btn" id="erdBtn" type="button">Diagram</button>
   <button class="btn" id="schemaBtn" type="button">Schema</button>
 </header>
-
-<div class="erd" id="erd" hidden role="dialog" aria-label="Table diagram">
-  <div class="eh"><b id="erdTitle">Diagram</b><span id="erdInfo"></span><div class="grow"></div>
-    <button class="linkbtn" id="erdReset" type="button">Reset layout</button><button class="btn" id="erdClose" type="button">Close</button></div>
-  <div class="scroll"><div class="canvas" id="erdCanvas"></div></div>
-</div>
 
 <div class="dialog" id="progDlg" hidden role="dialog" aria-label="Move progress between laptops">
   <div class="dh"><b>Move progress between laptops</b><button class="linkbtn" id="progClose" type="button">Close</button></div>
@@ -304,9 +301,19 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 
   <aside class="schema" id="drawer" hidden aria-label="Database schema">
     <div class="resizer" id="resizer" title="Drag to resize"></div>
-    <div class="sh"><b>Tables</b><button class="linkbtn" id="closeDrawer" type="button">Hide</button></div>
-    <input type="search" id="tfilter" placeholder="Filter tables or columns" aria-label="Filter tables or columns">
-    <div id="dbody"></div>
+    <div class="sh"><div class="seg" id="smode" role="group" aria-label="Schema view">
+      <button type="button" data-m="tables" aria-pressed="true">Schema</button><button type="button" data-m="diagram" aria-pressed="false">Diagram</button></div>
+      <button class="linkbtn" id="closeDrawer" type="button">Hide</button></div>
+    <div id="tpane">
+      <input type="search" id="tfilter" placeholder="Filter tables or columns" aria-label="Filter tables or columns">
+      <div id="dbody"></div>
+    </div>
+    <div id="epane" hidden>
+      <div class="ezoom"><button class="btn" type="button" id="ezOut" aria-label="Zoom out">−</button><button class="btn" type="button" id="ezFit">Fit</button><button class="btn" type="button" id="ezIn" aria-label="Zoom in">+</button>
+        <div class="grow"></div><button class="linkbtn" type="button" id="erdReset">Reset layout</button></div>
+      <p class="enote" id="erdInfo"></p>
+      <div class="ewrap" id="ewrap"><div class="ecanvas" id="erdCanvas"></div></div>
+    </div>
   </aside>
 </div>
 
@@ -470,6 +477,7 @@ function renderSchema() {
       `<tr data-c="${c.c}"><td>${c.c}</td><td>${ref(c.n) || c.t.toLowerCase().replace(/\(.*\)/, '')}</td></tr>`).join('')}</tbody></table>`).join('');
   $('defsBox').addEventListener('toggle', (e) => store.set('notesOpen', e.target.open));
   filterTables();
+  renderErd();
 }
 
 // Table name match shows the whole table; column match shows only matching columns.
@@ -676,6 +684,7 @@ const drawer = (open) => {
   document.querySelector('.shell').classList.toggle('pinned', open);
   $('scrim').hidden = !open || wide();
   store.set('schemaOpen', open);
+  if (open) renderErd();
 };
 $('schemaBtn').onclick = () => drawer($('drawer').hidden);
 const side = (open) => {
@@ -721,23 +730,28 @@ function erdAutoLayout(db, refs, boxes) {
   }
   return pos;
 }
-function openErd() {
+// Zoom: null = fit the panel width (never below 60%); otherwise a fixed factor.
+let erdZoom = null;
+function renderErd() {
+  if ($('drawer').hidden || $('epane').hidden) return;
   const db = state.db, refs = erdRefs(db), cv = $('erdCanvas');
-  $('erdTitle').textContent = db.name;
-  $('erdInfo').textContent = refs.length ? 'PK = primary key, FK = points to another table. Drag a table by its title; hover a table to highlight its links.'
+  $('erdInfo').textContent = refs.length ? 'Drag a table by its title. Hover a table to highlight its links.'
     : 'These tables are not linked: each one belongs to its own interview scenario.';
   const isFk = (t, c) => refs.some((r) => r.from === t && r.fc === c);
   cv.innerHTML = '<svg id="erdSvg"></svg>' + db.schema.map((t) => `<div class="ebox" data-t="${t.table}"><div class="et">${t.table}</div>${t.cols.map((c) =>
     `<div class="er" data-c="${c.c}"><i class="${isFk(t.table, c.c) ? 'fk' : ''}">${/^primary key/.test(c.n) ? 'PK' : isFk(t.table, c.c) ? 'FK' : ''}</i><span>${c.c}</span><small>${c.t.toLowerCase().replace(/\(.*\)/, '')}</small></div>`).join('')}</div>`).join('');
-  $('erd').hidden = false;
   const boxes = {}; cv.querySelectorAll('.ebox').forEach((b) => (boxes[b.dataset.t] = b));
   const auto = erdAutoLayout(db, refs, boxes), saved = store.get('erd.' + db.id, {});
   const place = (n, [x, y]) => { boxes[n].style.left = x + 'px'; boxes[n].style.top = y + 'px'; boxes[n]._p = [x, y]; };
   for (const n in boxes) place(n, saved[n] || auto[n]);
   const rowMid = (t, c) => { const b = boxes[t], r = b.querySelector(`[data-c="${c}"]`) || b; return b._p[1] + r.offsetTop + r.offsetHeight / 2; };
+  let z = 1;
   function draw() {
     let W = 0, H = 0; for (const n in boxes) { W = Math.max(W, boxes[n]._p[0] + boxes[n].offsetWidth); H = Math.max(H, boxes[n]._p[1] + boxes[n].offsetHeight); }
-    cv.style.width = W + 60 + 'px'; cv.style.height = H + 40 + 'px';
+    W += 60; H += 24;
+    z = erdZoom ?? Math.max(.6, Math.min(1, $('epane').clientWidth / W));
+    cv.style.width = W + 'px'; cv.style.height = H + 'px'; cv.style.transform = `scale(${z})`;
+    $('ewrap').style.width = W * z + 'px'; $('ewrap').style.height = H * z + 'px';
     $('erdSvg').innerHTML = refs.map((r, i) => {
       const a = boxes[r.from], b = boxes[r.to], y1 = rowMid(r.from, r.fc), y2 = rowMid(r.to, r.tc);
       let x2, d;
@@ -763,17 +777,28 @@ function openErd() {
   cv.onpointerleave = () => hot(null);
   cv.onpointerdown = (e) => {
     const h = e.target.closest('.et'); if (!h) return;
-    e.preventDefault(); const b = h.parentNode, n = b.dataset.t, sx = e.clientX, sy = e.clientY, [ox, oy] = b._p;
+    e.preventDefault(); const b = h.parentNode, n = b.dataset.t, sx = e.clientX, sy = e.clientY, [ox, oy] = b._p, z0 = z;
     h.setPointerCapture(e.pointerId); b.classList.add('drag');
-    const move = (ev) => { place(n, [Math.max(0, ox + ev.clientX - sx), Math.max(0, oy + ev.clientY - sy)]); draw(); };
+    const move = (ev) => { place(n, [Math.max(0, ox + (ev.clientX - sx) / z0), Math.max(0, oy + (ev.clientY - sy) / z0)]); draw(); };
     const up = () => { h.removeEventListener('pointermove', move); h.removeEventListener('pointerup', up); b.classList.remove('drag');
       const s = {}; for (const k in boxes) s[k] = boxes[k]._p; store.set('erd.' + db.id, s); };
     h.addEventListener('pointermove', move); h.addEventListener('pointerup', up);
   };
+  renderErd.zoom = (f) => { erdZoom = f === null ? null : Math.min(1.5, Math.max(.3, +(z * f).toFixed(2))); draw(); };
 }
-$('erdBtn').onclick = openErd;
-$('erdClose').onclick = () => { $('erd').hidden = true; };
-$('erdReset').onclick = () => { store.del('erd.' + state.db.id); openErd(); };
+// Schema panel view: table list or diagram (remembered).
+function setSchemaMode(m) {
+  $('tpane').hidden = m !== 'tables'; $('epane').hidden = m !== 'diagram';
+  $('drawer').classList.toggle('diagram', m === 'diagram');
+  $('smode').querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
+  store.set('schemaMode', m);
+  renderErd();
+}
+$('smode').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) setSchemaMode(b.dataset.m); };
+$('ezIn').onclick = () => renderErd.zoom && renderErd.zoom(1.2);
+$('ezOut').onclick = () => renderErd.zoom && renderErd.zoom(1 / 1.2);
+$('ezFit').onclick = () => renderErd.zoom && renderErd.zoom(null);
+$('erdReset').onclick = () => { store.del('erd.' + state.db.id); renderErd(); };
 
 // ---------- progress export / import (code = base64 of JSON: solved list + drafts + ratings) ----------
 function storedKeys(prefix) {
@@ -829,7 +854,8 @@ $('impBtn').onclick = () => {
 $('tfilter').oninput = filterTables;
 $('closeDrawer').onclick = () => drawer(false);
 $('scrim').onclick = () => { if (!$('progDlg').hidden) closeProgress(); else drawer(false); };
-document.addEventListener('keydown', (e) => { if (e.key !== 'Escape') return; if (!$('erd').hidden) $('erd').hidden = true; else if (!wide()) drawer(false); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !wide()) drawer(false); });
+setSchemaMode(store.get('schemaMode', 'tables'));
 drawer(wide() && store.get('schemaOpen', true));
 side(store.get('sideOpen', true));
 
@@ -842,7 +868,7 @@ $('resizer').addEventListener('pointerdown', (e) => {
   const r = $('resizer'); r.setPointerCapture(e.pointerId); r.classList.add('drag'); document.body.classList.add('resizing');
   let w = 364;
   const move = (ev) => { w = Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, 240), window.innerWidth - 700)); setSchemaW(w); };
-  const up = () => { r.removeEventListener('pointermove', move); r.removeEventListener('pointerup', up); r.classList.remove('drag'); document.body.classList.remove('resizing'); store.set('schemaW', w); };
+  const up = () => { r.removeEventListener('pointermove', move); r.removeEventListener('pointerup', up); r.classList.remove('drag'); document.body.classList.remove('resizing'); store.set('schemaW', w); renderErd(); };
   r.addEventListener('pointermove', move); r.addEventListener('pointerup', up);
 });
 
