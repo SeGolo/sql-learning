@@ -54,6 +54,12 @@ code { font-family: var(--f-mono); font-size: .9em; background: var(--sunk); bor
 .brand b { color: var(--accent); font-weight: 700; }
 .brand small { font: 500 12px var(--f-mono); color: var(--muted); letter-spacing: 0; }
 .top .grow { flex: 1; }
+/* Questions button ends at the list panel's right edge; the database picker then starts where the question text starts (.work padding-left). */
+:root { --side-w: 320px; }
+body:has(.shell.pinned) { --side-w: 300px; }
+.lead { display: flex; align-items: center; justify-content: space-between; gap: 18px;
+  width: calc(var(--side-w) - max(16px, env(safe-area-inset-left, 0px))); margin-right: 6px; }
+body:has(.shell.noside) .lead { width: auto; margin-right: 0; }
 .dbpick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 select { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; }
 .meter { display: flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -186,6 +192,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
   .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
   .qlist { max-height: 38vh; }
   .work { padding-left: max(16px, env(safe-area-inset-left, 0px)); }
+  .lead { width: auto; margin-right: 0; }
   .meter .bar { width: 70px; }
 }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
@@ -211,8 +218,10 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 </style>
 
 <header class="top">
-  <div class="brand">SQL Gym <b>500</b></div>
-  <button class="btn" id="sideBtn" type="button" aria-pressed="true">Questions</button>
+  <div class="lead">
+    <div class="brand">SQL Gym <b>500</b></div>
+    <button class="btn" id="sideBtn" type="button" aria-pressed="true">Questions</button>
+  </div>
   <label class="dbpick" for="db">
     <select id="db" aria-label="Database"></select>
   </label>
