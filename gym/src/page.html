@@ -51,6 +51,12 @@ body:has(.shell.pinned) { --side-w: 300px; }
 .lead { display: flex; align-items: center; justify-content: space-between; gap: 18px;
   width: calc(var(--side-w) - max(16px, env(safe-area-inset-left, 0px))); margin-right: 6px; }
 body:has(.shell.noside) .lead { width: auto; margin-right: 0; }
+/* Questions button sits in the list panel; the top-bar copy appears only while the list is hidden. */
+body:not(:has(.shell.noside)) #sideBtn { display: none; }
+/* List panel: Questions | Guide toggle; Guide shows the SQL Field Guide in an iframe. */
+.sidehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px 0 max(16px, env(safe-area-inset-left, 0px)); }
+.side.guide .filters, .side.guide .qlist { display: none; }
+#guide { flex: 1; width: 100%; border: 0; margin-top: 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .dbpick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 select { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; }
 .meter { display: flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
@@ -66,7 +72,7 @@ select { background: var(--panel); border: 1px solid var(--line); border-radius:
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .kbd { font: 500 11px var(--f-mono); opacity: .75; margin-left: 4px; }
 
-.shell { display: grid; grid-template-columns: 320px minmax(0, 1fr); min-height: calc(100% - 60px); }
+.shell { display: grid; grid-template-columns: var(--side-w) minmax(0, 1fr); min-height: calc(100% - 60px); }
 .side { border-right: 1px solid var(--line); background: var(--panel); display: flex; flex-direction: column; min-width: 0;
   position: sticky; top: calc(env(safe-area-inset-top, 0px) + 57px); height: calc(100vh - 57px - env(safe-area-inset-top, 0px)); }
 .filters { display: grid; gap: 8px; padding: 12px max(16px, env(safe-area-inset-left, 0px)) 12px 16px; border-bottom: 1px solid var(--line); }
@@ -129,11 +135,12 @@ textarea#sql { display: block; width: 100%; min-height: 200px; resize: vertical;
 .rate .chip { min-width: 28px; padding: 2px 6px; }
 
 /* Schema: pinned right column on wide screens, slide-over on narrow ones. Deliberately plain. */
-.shell.pinned { grid-template-columns: 300px minmax(0, 1fr) var(--schema-w, 364px); }
+.shell.pinned { grid-template-columns: var(--side-w) minmax(0, 1fr) var(--schema-w, 364px); }
 .shell.noside { grid-template-columns: minmax(0, 1fr); }
 .shell.noside.pinned { grid-template-columns: minmax(0, 1fr) var(--schema-w, 364px); }
 .shell.noside .side { display: none; }
 .resizer { position: absolute; top: 0; bottom: 0; left: -3px; width: 7px; cursor: col-resize; z-index: 2; }
+.resizer.qres { left: auto; right: -4px; }
 .resizer:hover, .resizer.drag { background: var(--line); }
 body.resizing { cursor: col-resize; user-select: none; }
 .schema { background: var(--panel); border-left: 1px solid var(--line); overflow-y: auto; min-width: 0;
@@ -169,7 +176,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 .linkbtn:hover { color: var(--ink); }
 .scrim { position: fixed; inset: 0; z-index: 15; background: rgba(10, 16, 22, .35); }
 @media (max-width: 1200px) {
-  .shell.pinned { grid-template-columns: 300px minmax(0, 1fr); }
+  .shell.pinned { grid-template-columns: var(--side-w) minmax(0, 1fr); }
   .shell.noside.pinned { grid-template-columns: minmax(0, 1fr); }
   .schema { position: fixed; z-index: 20; top: 0; right: 0; bottom: 0; height: auto; width: min(442px, 100%);
     padding-top: calc(16px + env(safe-area-inset-top, 0px)); box-shadow: -12px 0 40px rgba(0,0,0,.18); }
@@ -210,6 +217,8 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 @media (max-width: 900px) {
   .shell { grid-template-columns: minmax(0, 1fr); }
   .side { position: static; height: auto; border-right: 0; border-bottom: 1px solid var(--line); }
+  .resizer.qres { display: none; }
+  #guide { height: 70vh; flex: none; }
   .qlist { max-height: 38vh; }
   .work { padding-left: max(16px, env(safe-area-inset-left, 0px)); }
   .lead { width: auto; margin-right: 0; }
@@ -270,6 +279,10 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 
 <div class="shell">
   <aside class="side" aria-label="Questions">
+    <div class="resizer qres" id="qresizer" title="Drag to resize"></div>
+    <div class="sidehead"><div class="seg" id="lmode" role="group" aria-label="List panel view">
+      <button type="button" data-m="questions" aria-pressed="true">Questions</button><button type="button" data-m="guide" aria-pressed="false">Guide</button></div>
+      <button class="linkbtn" id="sideHide" type="button">Hide</button></div>
     <div class="filters">
       <div class="row">
         <select id="ftopic" aria-label="Topic"></select>
@@ -284,6 +297,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
       </div>
     </div>
     <ul class="qlist" id="qlist"></ul>
+    <iframe id="guide" title="SQL Field Guide" hidden></iframe>
   </aside>
 
   <main class="work" id="work">
@@ -683,7 +697,25 @@ const side = (open) => {
   $('sideBtn').setAttribute('aria-pressed', open);
   store.set('sideOpen', open);
 };
-$('sideBtn').onclick = () => side(document.querySelector('.shell').classList.contains('noside'));
+$('sideBtn').onclick = () => side(true);
+$('sideHide').onclick = () => side(false);
+// List panel view: question list or the SQL Field Guide (remembered). The guide sits next to this page
+// on claude.ai and one folder up on GitHub Pages; loaded on first use.
+async function guideUrl() {
+  for (const u of ['sql_field_guide.html', '../sql_field_guide.html']) {
+    try { if ((await fetch(u, { method: 'HEAD' })).ok) return u; } catch {}
+  }
+  return '../sql_field_guide.html';
+}
+async function setListMode(m) {
+  document.querySelector('.side').classList.toggle('guide', m === 'guide');
+  $('guide').hidden = m !== 'guide';
+  $('lmode').querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
+  store.set('listMode', m);
+  if (m === 'guide' && !$('guide').src) $('guide').src = await guideUrl();
+}
+$('lmode').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) setListMode(b.dataset.m); };
+setListMode(store.get('listMode', 'questions'));
 
 // ---------- diagram: one box per table, a line from each "→ table[.col]" column to the column it references ----------
 function erdRefs(db) {
@@ -860,6 +892,19 @@ $('resizer').addEventListener('pointerdown', (e) => {
   let w = 364;
   const move = (ev) => { w = Math.round(Math.min(Math.max(window.innerWidth - ev.clientX, 240), window.innerWidth - 700)); setSchemaW(w); };
   const up = () => { r.removeEventListener('pointermove', move); r.removeEventListener('pointerup', up); r.classList.remove('drag'); document.body.classList.remove('resizing'); store.set('schemaW', w); renderErd(); };
+  r.addEventListener('pointermove', move); r.addEventListener('pointerup', up);
+});
+
+// Drag the question list's right edge to resize it (also moves the top-bar alignment, which uses --side-w).
+const setSideW = (w) => document.body.style.setProperty('--side-w', w + 'px');
+if (store.get('sideW', 0)) setSideW(store.get('sideW', 0));
+$('qresizer').addEventListener('pointerdown', (e) => {
+  if (window.innerWidth <= 900) return;
+  e.preventDefault();
+  const r = $('qresizer'); r.setPointerCapture(e.pointerId); r.classList.add('drag'); document.body.classList.add('resizing');
+  let w = 0;
+  const move = (ev) => { w = Math.round(Math.min(Math.max(ev.clientX, 220), window.innerWidth - 560)); setSideW(w); };
+  const up = () => { r.removeEventListener('pointermove', move); r.removeEventListener('pointerup', up); r.classList.remove('drag'); document.body.classList.remove('resizing'); if (w) { store.set('sideW', w); renderErd(); } };
   r.addEventListener('pointermove', move); r.addEventListener('pointerup', up);
 });
 
