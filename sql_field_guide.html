@@ -273,7 +273,7 @@
   }
   td.miss b{color:var(--warn);font-weight:600}  /* <b> inside a mistake cell = rust-red emphasis */
 
-  /* CALLOUT - the highlighted box used for section 08. */
+  /* CALLOUT - the highlighted box used for section 00. */
   .callout{
     background:var(--accent-soft);
     border:1px solid var(--accent);
@@ -411,7 +411,7 @@
   html.embed .note{font-size:13px;line-height:1.6;color:var(--muted);max-width:none}
   /* descriptions use the schema panel's grey, like its column names */
   html.embed td.use{color:var(--muted)}
-  /* section 08 is a tinted callout in the standalone guide; here it looks like every other section */
+  /* section 00 is a tinted callout in the standalone guide; here it looks like every other section */
   html.embed .callout{background:none;border:0;border-radius:0;padding:0}
   html.embed .callout ul,html.embed .callout > p{font-size:13px!important}
   html.embed footer{display:none}
@@ -431,14 +431,17 @@
     <!-- TABLE OF CONTENTS: each <a href="#id"> scrolls to the element
          further down that has the matching id="..." attribute. -->
     <nav class="toc">
+      <a href="#order">Execution order</a>
+      <a href="#types">Data types</a>
       <a href="#clauses">Clauses</a>
       <a href="#filters">Filtering</a>
       <a href="#agg">Aggregates</a>
       <a href="#joins">Joins</a>
+      <a href="#subq">Subqueries</a>
       <a href="#sets">Stacking rows</a>
       <a href="#rowfn">Row functions</a>
+      <a href="#dates">Dates</a>
       <a href="#count">Counting a condition</a>
-      <a href="#order">Execution order</a>
       <a href="#next">Coming next</a>
     </nav>
     <!-- Search box: only shown in embedded mode (see the script at the bottom). -->
@@ -446,7 +449,7 @@
   </header>
 
   <!-- ==========================================================================
-       ANATOMY OF EVERY SECTION - sections 01-07 and 09 all use this exact shape:
+       ANATOMY OF EVERY SECTION - sections 01-11 all use this exact shape:
 
          <section id="X">                     one topic; the TOC links point here
            <h2><span class="num">NN</span> Title</h2>
@@ -472,10 +475,102 @@
        Only the comment marker changes between sections; the structure repeats.
        ========================================================================== -->
 
-  <!-- 01 - Clauses: the skeleton of a query. -->
+  <!-- 00 - Execution order (first: the mental model everything else builds on). NOTE: this block is a <div class="callout">, not a
+       <section> - it gets the highlighted-box styling instead. The id="order"
+       still works as a TOC jump target. -->
+  <div class="callout" id="order">
+    <h2><span class="num">00</span> The key mental model &mdash; execution order</h2>
+    <p style="margin:.2rem 0 .4rem;color:var(--muted)">You <em>write</em> the clauses in one order, but SQL <em>runs</em> them in another. This single fact explains most of the "why can't I&hellip;" bugs.</p>
+    <div class="flow">
+      <span>FROM</span><span class="arw">&rarr;</span>
+      <span>WHERE</span><span class="arw">&rarr;</span>
+      <span>GROUP BY</span><span class="arw">&rarr;</span>
+      <span>HAVING</span><span class="arw">&rarr;</span>
+      <span>SELECT</span><span class="arw">&rarr;</span>
+      <span>ORDER BY</span>
+    </div>
+    <ul>
+      <li><code>WHERE</code> can't use <code>COUNT</code>/<code>SUM</code> &mdash; aggregates don't exist until after <code>GROUP BY</code>, so filter groups with <code>HAVING</code>.</li>
+      <li>Aliases work in <code>ORDER BY</code> but not <code>HAVING</code>/<code>WHERE</code> &mdash; the alias is born in <code>SELECT</code>, which runs late.</li>
+      <li><code>SELECT</code> &mdash; where you build aliases and computed columns &mdash; happens almost <b>last</b>.</li>
+    </ul>
+  </div>
+
+  <!-- 01 - Data types: what a column can hold (PostgreSQL) -->
+  <section id="types">
+    <h2><span class="num">01</span> Data types &mdash; what a column holds</h2>
+    <p class="intro">Every column has a type, and most surprising results come from it: integer division, text that looks like a number, dates vs timestamps. Names are PostgreSQL; MySQL and Oracle differ slightly.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Type</th><th>Holds&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">INTEGER / BIGINT</td>
+          <td class="use">Whole numbers: ids, counts, quantities</td>
+          <td class="code"><pre>SELECT 7 / 2      -- 3
+SELECT 7 / 2.0    -- 3.5</pre></td>
+          <td class="miss">Integer &divide; integer <b>drops the decimals</b>. Make one side decimal (<code>2.0</code>) or <code>CAST</code> it</td>
+        </tr>
+        <tr>
+          <td class="term">NUMERIC(p, s)</td>
+          <td class="use"><b>Exact</b> decimals &mdash; use for money. p = total digits, s = digits after the point</td>
+          <td class="code"><pre>price NUMERIC(10,2)  -- 12345678.90</pre></td>
+          <td class="miss">Storing money in REAL/DOUBLE: small rounding errors add up in <code>SUM</code></td>
+        </tr>
+        <tr>
+          <td class="term">REAL / DOUBLE PRECISION</td>
+          <td class="use"><b>Approximate</b> decimals: measurements, ratios</td>
+          <td class="code"><pre>SELECT CAST(0.1 AS DOUBLE PRECISION)
+     + CAST(0.2 AS DOUBLE PRECISION)
+-- 0.30000000000000004</pre></td>
+          <td class="miss"><code>ROUND(double, 2)</code> errors in PostgreSQL &mdash; <code>CAST(x AS NUMERIC)</code> first</td>
+        </tr>
+        <tr>
+          <td class="term">VARCHAR(n) / TEXT</td>
+          <td class="use">Text. VARCHAR(n) has a max length; TEXT has none</td>
+          <td class="code"><pre>WHERE department = 'HR'</pre></td>
+          <td class="miss">Text goes in <b>single</b> quotes. <code>"HR"</code> in double quotes means a <b>column</b> named HR</td>
+        </tr>
+        <tr>
+          <td class="term">CHAR(n)</td>
+          <td class="use">Fixed-length text, padded with spaces: codes</td>
+          <td class="code"><pre>country CHAR(2)  -- 'CZ'</pre></td>
+          <td class="miss">Numbers stored as text sort and compare as text: <code>'9' &gt; '40'</code></td>
+        </tr>
+        <tr>
+          <td class="term">BOOLEAN</td>
+          <td class="use">true / false / NULL</td>
+          <td class="code"><pre>WHERE is_active
+WHERE is_vip IS NOT TRUE</pre></td>
+          <td class="miss"><code>WHERE NOT is_vip</code> drops rows where is_vip is <b>NULL</b>; <code>IS NOT TRUE</code> keeps them</td>
+        </tr>
+        <tr>
+          <td class="term">DATE</td>
+          <td class="use">A calendar day, no time</td>
+          <td class="code"><pre>DATE '2024-03-01' + 7    -- 2024-03-08
+delivered_date - shipped_date  -- days</pre></td>
+          <td class="miss"><code>date - date</code> gives a whole number of days; on TIMESTAMPs it gives an INTERVAL</td>
+        </tr>
+        <tr>
+          <td class="term">TIMESTAMP</td>
+          <td class="use">Date + time of day</td>
+          <td class="code"><pre>WHERE order_date &gt;= '2024-03-01'
+  AND order_date &lt;  '2024-03-02'</pre></td>
+          <td class="miss"><code>= '2024-03-01'</code> only matches <b>midnight</b> &mdash; filter a day with <code>&gt;=</code> and <code>&lt;</code> next day</td>
+        </tr>
+        <tr>
+          <td class="term">INTERVAL</td>
+          <td class="use">A length of time</td>
+          <td class="code"><pre>order_date + INTERVAL '1 month'</pre></td>
+          <td class="miss">Not a number: <code>EXTRACT(EPOCH FROM interval) / 86400</code> turns it into days</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <!-- 02 - Clauses: the skeleton of a query. -->
   <section id="clauses">
-    <h2><span class="num">01</span> Clauses &mdash; the skeleton</h2>
-    <p class="intro">The building blocks of every query. Written in this order, but <em>run</em> in a different one (see section 08).</p>
+    <h2><span class="num">02</span> Clauses &mdash; the skeleton</h2>
+    <p class="intro">The building blocks of every query. Written in this order, but <em>run</em> in a different one (see section 00).</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Clause</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
       <tbody>
@@ -484,6 +579,12 @@
           <td class="use">Choose which columns to show or compute</td>
           <td class="code"><pre>SELECT first_name, salary</pre></td>
           <td class="miss">Trailing comma before <code>FROM</code> &rarr; <b>"syntax error near FROM"</b></td>
+        </tr>
+        <tr>
+          <td class="term">FROM</td>
+          <td class="use">Name the table(s) to read &mdash; runs <b>first</b> (section 00)</td>
+          <td class="code"><pre>FROM employees e</pre></td>
+          <td class="miss">After a join, a column name in both tables needs its alias (<code>e.id</code>) &rarr; <b>"column reference is ambiguous"</b></td>
         </tr>
         <tr>
           <td class="term">WHERE</td>
@@ -526,9 +627,9 @@ LIMIT 10</pre></td>
     </table></div></div>
   </section>
 
-  <!-- 02 - Filtering operators: what goes inside WHERE / HAVING. -->
+  <!-- 03 - Filtering operators: what goes inside WHERE / HAVING. -->
   <section id="filters">
-    <h2><span class="num">02</span> Filtering operators</h2>
+    <h2><span class="num">03</span> Filtering operators</h2>
     <p class="intro">Live inside <code>WHERE</code> and <code>HAVING</code>. The boundary and NULL rules here caused most of your early bugs.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Operator</th><th>Use it when&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
@@ -558,7 +659,7 @@ IN ('HR','Admin')</pre></td>
           <td class="use">Match a text pattern</td>
           <td class="code"><pre>WHERE LOWER(name)
 LIKE 'draft%'</pre></td>
-          <td class="miss"><code>%</code>=any chars, <code>_</code>=one char. No wildcard = same as <code>=</code></td>
+          <td class="miss"><code>%</code>=any chars, <code>_</code>=one char. <b>Case-sensitive</b> in PostgreSQL &mdash; use <code>ILIKE</code> or <code>LOWER()</code></td>
         </tr>
         <tr>
           <td class="term">IS NULL</td>
@@ -578,9 +679,9 @@ AND salary &gt; 80000</pre></td>
     </table></div></div>
   </section>
 
-  <!-- 03 - Aggregate functions: many rows in, one number out. -->
+  <!-- 04 - Aggregate functions: many rows in, one number out. -->
   <section id="agg">
-    <h2><span class="num">03</span> Aggregate functions</h2>
+    <h2><span class="num">04</span> Aggregate functions</h2>
     <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Function</th><th>Gives you&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
@@ -625,9 +726,9 @@ AND salary &gt; 80000</pre></td>
     </table></div></div>
   </section>
 
-  <!-- 04 - Joins: glue tables together side by side (add columns). -->
+  <!-- 05 - Joins: glue tables together side by side (add columns). -->
   <section id="joins">
-    <h2><span class="num">04</span> Joins &mdash; combine tables side by side</h2>
+    <h2><span class="num">05</span> Joins &mdash; combine tables side by side</h2>
     <p class="intro">Joins <b>add columns</b>. The <code>ON</code> is just a condition &mdash; usually a foreign key, but it can compare any columns.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Join</th><th>Use it when you want&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
@@ -679,26 +780,22 @@ CROSS JOIN nums b</pre></td>
   e1.salary
 FROM employees e1
 JOIN employees e2
-  ON e1.dept = e2.dept
+  ON e1.department = e2.department
  AND e1.salary &gt; e2.salary</pre></td>
           <td class="miss">Needs two aliases; produces duplicates &rarr; add <code>DISTINCT</code></td>
         </tr>
         <tr>
           <td class="term">Self-join 2</td>
           <td class="use">Find all pairs of employees in the same department.</td>
-          <td class="code"><pre>
-SELECT
+          <td class="code"><pre>SELECT
   a.first_name AS employee1,
   b.first_name AS employee2,
   a.department
 FROM employee a
 JOIN employee b
-  ON a.department = b.department -- same department
-  AND a.id <> b.id -- avoid self-pair
-  -- The a.id <> b.id condition is important.
-  -- Without it, every employee gets paired with themselves.
-          </pre></td>
-          <td class="miss">Needs a name and a query; can be referenced multiple times in the main query</td>
+  ON a.department = b.department  -- same department
+ AND a.id &lt; b.id                  -- each pair once, no self-pairs</pre></td>
+          <td class="miss"><code>&lt;&gt;</code> lists every pair <b>twice</b> (Anna&ndash;Petr and Petr&ndash;Anna); with no id condition everyone is also paired with themselves</td>
         </tr>
         <tr>
           <td class="term">Self-join 3</td>
@@ -724,6 +821,16 @@ JOIN transportation_numbers n2
   ON n1.index &lt; n2.index        -- keep ONE ordering
 WHERE n1.number * n2.number &gt; 11</pre></td>
           <td class="miss"><code>&lt;&gt;</code> here would output <code>(2,7)</code> <em>and</em> <code>(7,2)</code> &mdash; the same pair twice.</td>
+        </tr>
+        <tr>
+          <td class="term">Fan-out</td>
+          <td class="use">Joining one row to <b>many</b> rows repeats it once per match</td>
+          <td class="code"><pre>SELECT o.order_id, SUM(p.amount)
+FROM orders o
+JOIN order_items oi ON oi.order_id = o.order_id
+JOIN payments p     ON p.order_id = o.order_id
+GROUP BY o.order_id  -- wrong total</pre></td>
+          <td class="miss">Each payment is counted once <b>per item</b>. Join two "many" tables only after aggregating each one (subquery or CTE)</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -758,9 +865,65 @@ JOIN categories c ON c.category_id = pr.category_id  -- pr is above &#10004;</pr
     </div>
   </section>
 
-  <!-- 05 - Stacking rows: UNION family, adds rows instead of columns. -->
+  <!-- 06 - Subqueries and NULL traps: a query inside a query -->
+  <section id="subq">
+    <h2><span class="num">06</span> Subqueries &amp; NULL traps</h2>
+    <p class="intro">A query inside another query: as a list (<code>IN</code>), a test (<code>EXISTS</code>), one value, or a table. NULL is "unknown", so comparisons with it are never true &mdash; the source of the nastiest traps.</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Pattern</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">IN (subquery)</td>
+          <td class="use">Keep rows whose value appears in another result</td>
+          <td class="code"><pre>WHERE customer_id IN (
+  SELECT customer_id FROM orders)</pre></td>
+          <td class="miss">Fine for a list of ids &mdash; but see <code>NOT IN</code> below</td>
+        </tr>
+        <tr>
+          <td class="term">NOT IN (subquery)</td>
+          <td class="use">Keep rows whose value does <b>not</b> appear</td>
+          <td class="code"><pre>WHERE customer_id NOT IN (
+  SELECT referred_by FROM customers
+  WHERE referred_by IS NOT NULL)</pre></td>
+          <td class="miss">One <b>NULL</b> in the subquery &rarr; <b>no rows at all</b>. Filter NULLs out or use <code>NOT EXISTS</code></td>
+        </tr>
+        <tr>
+          <td class="term">EXISTS / NOT EXISTS</td>
+          <td class="use">Test whether a matching row exists</td>
+          <td class="code"><pre>WHERE NOT EXISTS (
+  SELECT 1 FROM orders o
+  WHERE o.customer_id = c.customer_id)</pre></td>
+          <td class="miss">The inner WHERE must point to the <b>outer</b> table (<code>c.</code>), or the test is the same for every row</td>
+        </tr>
+        <tr>
+          <td class="term">Scalar subquery</td>
+          <td class="use">Compare with <b>one</b> value</td>
+          <td class="code"><pre>WHERE salary &gt; (
+  SELECT AVG(salary) FROM employees)</pre></td>
+          <td class="miss">Must return exactly one row &mdash; more rows is an error</td>
+        </tr>
+        <tr>
+          <td class="term">Subquery in FROM</td>
+          <td class="use">Query a result like a table (aggregate twice)</td>
+          <td class="code"><pre>SELECT AVG(n)
+FROM (SELECT customer_id, COUNT(*) AS n
+      FROM orders
+      GROUP BY customer_id) t</pre></td>
+          <td class="miss">Give it an alias (<code>t</code>) &mdash; required in MySQL and before PostgreSQL 16</td>
+        </tr>
+        <tr>
+          <td class="term">IS DISTINCT FROM</td>
+          <td class="use">Compare when either side can be NULL</td>
+          <td class="code"><pre>WHERE old_city IS DISTINCT FROM new_city</pre></td>
+          <td class="miss"><code>a &lt;&gt; b</code> is NULL (row dropped) when either side is NULL</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <!-- 07 - Stacking rows: UNION family, adds rows instead of columns. -->
   <section id="sets">
-    <h2><span class="num">05</span> Stacking rows</h2>
+    <h2><span class="num">07</span> Stacking rows</h2>
     <p class="intro">Where joins add columns, these add <b>rows</b> &mdash; two result sets on top of each other. Both halves need the same column count and order.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Keyword</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
@@ -785,9 +948,9 @@ SELECT dept FROM b</pre></td>
     </table></div></div>
   </section>
 
-  <!-- 06 - Row-level functions: transform one value per row. -->
+  <!-- 08 - Row-level functions: transform one value per row. -->
   <section id="rowfn">
-    <h2><span class="num">06</span> Row-level functions</h2>
+    <h2><span class="num">08</span> Row-level functions</h2>
     <p class="intro">Transform a value <em>per row</em>. These clean, convert, and label your data &mdash; the daily work of data quality.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Function</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
@@ -834,21 +997,72 @@ SELECT dept FROM b</pre></td>
           <td class="term">GREATEST / LEAST</td>
           <td class="use">Larger / smaller of several values</td>
           <td class="code"><pre>GREATEST(a.number, b.number)</pre></td>
-          <td class="miss">A NULL argument can make the whole result NULL</td>
+          <td class="miss">PostgreSQL <b>skips NULLs</b> (NULL only if all are NULL); MySQL and Oracle return NULL if any argument is NULL</td>
         </tr>
         <tr>
           <td class="term">ROUND(x,n)</td>
           <td class="use">Round to n decimals</td>
-          <td class="code"><pre>ROUND(count/total * 100, 2)</pre></td>
-          <td class="miss">Watch the parens &mdash; <code>ROUND(value, 2)</code>, both inside</td>
+          <td class="code"><pre>ROUND(100.0 * part / total, 2)</pre></td>
+          <td class="miss"><code>part / total</code> with integers is <b>integer division</b> (= 0). <code>100.0</code> first makes it NUMERIC; <code>ROUND(double, 2)</code> errors in PostgreSQL</td>
         </tr>
       </tbody>
     </table></div></div>
   </section>
 
-  <!-- 07 - Counting a condition: the SUM(CASE...) / COUNT(CASE...) trick. -->
+  <!-- 09 - Dates and times: periods, parts, differences -->
+  <section id="dates">
+    <h2><span class="num">09</span> Dates &amp; times</h2>
+    <p class="intro">Group by period, pick parts of a date, shift and subtract dates. Most date bugs are about a time hiding inside a TIMESTAMP, or about which day is "today".</p>
+    <div class="tablecard"><div class="scroll"><table>
+      <thead><tr><th>Function</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
+      <tbody>
+        <tr>
+          <td class="term">CURRENT_DATE / NOW()</td>
+          <td class="use">Today / the current date and time</td>
+          <td class="code"><pre>WHERE order_date &gt;= CURRENT_DATE - 30</pre></td>
+          <td class="miss">Practice databases have a fixed "today" (e.g. Pulse: 30 Jun 2025) &mdash; use that date, not CURRENT_DATE</td>
+        </tr>
+        <tr>
+          <td class="term">DATE_TRUNC('month', ts)</td>
+          <td class="use">Cut a date down to its month / week / day &mdash; for grouping by period</td>
+          <td class="code"><pre>SELECT DATE_TRUNC('month', order_date) AS m,
+       COUNT(*)
+FROM orders
+GROUP BY m</pre></td>
+          <td class="miss">Returns a <b>timestamp</b> (2024-03-01 00:00:00) &mdash; <code>CAST(&hellip; AS DATE)</code> for display. Weeks start on Monday</td>
+        </tr>
+        <tr>
+          <td class="term">EXTRACT(part FROM ts)</td>
+          <td class="use">One number from a date: YEAR, MONTH, DOW&hellip;</td>
+          <td class="code"><pre>EXTRACT(YEAR FROM order_date)
+EXTRACT(DOW FROM order_date)</pre></td>
+          <td class="miss"><code>DOW</code>: <b>Sunday = 0</b>, Saturday = 6. Grouping by MONTH alone merges March 2023 with March 2024</td>
+        </tr>
+        <tr>
+          <td class="term">+ / &minus; INTERVAL</td>
+          <td class="use">Shift a date by a period</td>
+          <td class="code"><pre>order_date + INTERVAL '1 month'</pre></td>
+          <td class="miss">Month ends clamp: 31 Jan + 1 month = <b>29 Feb</b> (2024)</td>
+        </tr>
+        <tr>
+          <td class="term">date &minus; date</td>
+          <td class="use">Days between two dates</td>
+          <td class="code"><pre>delivered_date - shipped_date</pre></td>
+          <td class="miss">On TIMESTAMPs the result is an INTERVAL &mdash; <code>CAST</code> both to DATE for whole days</td>
+        </tr>
+        <tr>
+          <td class="term">TO_CHAR(ts, fmt)</td>
+          <td class="use">Format a date as text</td>
+          <td class="code"><pre>TO_CHAR(order_date, 'YYYY-MM')</pre></td>
+          <td class="miss">The result is <b>text</b>: 'YYYY-MM' sorts right, 'Mon YYYY' sorts alphabetically</td>
+        </tr>
+      </tbody>
+    </table></div></div>
+  </section>
+
+  <!-- 10 - Counting a condition: the SUM(CASE...) / COUNT(CASE...) trick. -->
   <section id="count">
-    <h2><span class="num">07</span> Counting a condition</h2>
+    <h2><span class="num">10</span> Counting a condition</h2>
     <p class="intro">SQL has no "count only the matching rows" function &mdash; you fake it by turning the condition into 1s and 0s, then summing. Three spellings, same answer.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Pattern</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
@@ -883,30 +1097,9 @@ SELECT dept FROM b</pre></td>
     </table></div></div>
   </section>
 
-  <!-- 08 - Execution order. NOTE: this block is a <div class="callout">, not a
-       <section> - it gets the highlighted-box styling instead. The id="order"
-       still works as a TOC jump target. -->
-  <div class="callout" id="order">
-    <h2><span class="num">08</span> The key mental model &mdash; execution order</h2>
-    <p style="margin:.2rem 0 .4rem;color:var(--muted)">You <em>write</em> the clauses in one order, but SQL <em>runs</em> them in another. This single fact explains most of the "why can't I&hellip;" bugs.</p>
-    <div class="flow">
-      <span>FROM</span><span class="arw">&rarr;</span>
-      <span>WHERE</span><span class="arw">&rarr;</span>
-      <span>GROUP BY</span><span class="arw">&rarr;</span>
-      <span>HAVING</span><span class="arw">&rarr;</span>
-      <span>SELECT</span><span class="arw">&rarr;</span>
-      <span>ORDER BY</span>
-    </div>
-    <ul>
-      <li><code>WHERE</code> can't use <code>COUNT</code>/<code>SUM</code> &mdash; aggregates don't exist until after <code>GROUP BY</code>, so filter groups with <code>HAVING</code>.</li>
-      <li>Aliases work in <code>ORDER BY</code> but not <code>HAVING</code>/<code>WHERE</code> &mdash; the alias is born in <code>SELECT</code>, which runs late.</li>
-      <li><code>SELECT</code> &mdash; where you build aliases and computed columns &mdash; happens almost <b>last</b>.</li>
-    </ul>
-  </div>
-
-  <!-- 09 - Coming next: window functions + CTEs (not learned yet). -->
+  <!-- 11 - Coming next: window functions + CTEs (not learned yet). -->
   <section id="next">
-    <h2><span class="num">09</span> Coming next &mdash; advanced</h2>
+    <h2><span class="num">11</span> Coming next &mdash; advanced</h2>
     <p class="intro">Not learned yet. Window functions are the dividing line between "basic" and "pokro&#269;il&aacute; znalost SQL" &mdash; learn them next.</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Tool</th><th>Use it to&hellip;</th><th>Example</th><th>Note</th></tr></thead>
