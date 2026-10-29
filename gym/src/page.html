@@ -51,8 +51,6 @@ body:has(.shell.pinned) { --side-w: 300px; }
 .lead { display: flex; align-items: center; justify-content: space-between; gap: 18px;
   width: calc(var(--side-w) - max(16px, env(safe-area-inset-left, 0px))); margin-right: 6px; }
 body:has(.shell.noside) .lead { width: auto; margin-right: 0; }
-/* Questions button sits in the list panel; the top-bar copy appears only while the list is hidden. */
-body:not(:has(.shell.noside)) #sideBtn { display: none; }
 /* List panel: Questions | Guide toggle; Guide shows the SQL Field Guide in an iframe. */
 .sidehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px 0 max(16px, env(safe-area-inset-left, 0px)); }
 .side.guide .filters, .side.guide .qlist { display: none; }
@@ -264,7 +262,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 <header class="top">
   <div class="lead">
     <div class="brand">SQL Gym <b>500</b></div>
-    <button class="btn" id="sideBtn" type="button" aria-pressed="true">Questions</button>
+    <button class="btn" id="sideBtn" type="button" aria-pressed="true" title="Show or hide the left panel">Hide</button>
   </div>
   <label class="dbpick" for="db">
     <select id="db" aria-label="Database"></select>
@@ -297,7 +295,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
     <div class="resizer qres" id="qresizer" title="Drag to resize"></div>
     <div class="sidehead"><div class="seg" id="lmode" role="group" aria-label="List panel view">
       <button type="button" data-m="questions" aria-pressed="true">Questions</button><button type="button" data-m="guide" aria-pressed="false">Guide</button><button type="button" data-m="stats" aria-pressed="false">Stats</button></div>
-      <span><button class="linkbtn" id="guideAll" type="button" hidden>Expand all</button><button class="linkbtn" id="sideHide" type="button">Hide</button></span></div>
+      <button class="linkbtn" id="guideAll" type="button" hidden>Expand all</button></div>
     <div class="filters">
       <div class="row">
         <select id="ftopic" aria-label="Topic"></select>
@@ -711,11 +709,11 @@ const drawer = (open) => {
 $('schemaBtn').onclick = () => drawer($('drawer').hidden);
 const side = (open) => {
   document.querySelector('.shell').classList.toggle('noside', !open);
-  $('sideBtn').setAttribute('aria-pressed', open);
+  $('sideBtn').setAttribute('aria-pressed', open); $('sideBtn').textContent = open ? 'Hide' : 'Show';
   store.set('sideOpen', open);
 };
-$('sideBtn').onclick = () => side(true);
-$('sideHide').onclick = () => side(false);
+// Top-bar toggle next to the title: always visible, Hide / Show the left panel.
+$('sideBtn').onclick = () => side(document.querySelector('.shell').classList.contains('noside'));
 // List panel view: question list or the SQL Field Guide (remembered). The guide sits next to this page
 // on claude.ai and one folder up on GitHub Pages; loaded on first use.
 async function guideUrl() {
