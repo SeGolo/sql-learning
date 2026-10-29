@@ -63,6 +63,24 @@ body:has(.shell.noside) .lead { width: auto; margin-right: 0; }
 /* List panel: Questions | Guide toggle; Guide shows the SQL Field Guide in an iframe. */
 .sidehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px 0 max(16px, env(safe-area-inset-left, 0px)); }
 .side.guide .filters, .side.guide .qlist { display: none; }
+/* Czech practice: hover translation on SQL tasks, gap-fill drills, lesson cards (also shown in the right panel) */
+.czt { position: relative; display: inline-block; margin: 0 6px 0 2px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px;
+  font: 600 11px/1.6 var(--f-mono); color: var(--muted); cursor: help; vertical-align: 2px; }
+.czt .tip { display: none; position: absolute; left: 0; top: calc(100% + 6px); z-index: 12; width: min(560px, 80vw); padding: 10px 12px;
+  background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); box-shadow: 0 8px 24px rgba(0,0,0,.15);
+  font: 400 15px/1.5 var(--f-body); color: var(--ink); white-space: normal; cursor: auto; }
+.czt:hover .tip, .czt:focus .tip { display: block; }
+.gap { display: inline-block; min-width: 4.5em; border-bottom: 2px solid var(--muted); margin: 0 2px; }
+.czin { display: block; width: 100%; border: 0; padding: 12px 14px; background: var(--panel); font: 17px/1.4 var(--f-body); outline: none; }
+.lesson { max-width: 80ch; font-size: 15px; }
+.lesson p { margin: 0 0 10px; }
+.lesson table { border-collapse: collapse; margin: 6px 0 14px; font-size: 14px; }
+.lesson th, .lesson td { border: 1px solid var(--line); padding: 4px 10px; text-align: left; vertical-align: top; }
+.lesson th { font-weight: 600; }
+.schema .lesson { font: 13px/1.5 var(--f-body); color: var(--ink); }
+.schema .lesson table { font-size: 12.5px; color: var(--ink); }
+.schema .lesson td:first-child { width: auto; }
+.schema .lesson h4 { margin: 0 0 8px; font: 600 14px var(--f-body); }
 /* Stats tab: solved / total per topic and database, thin grid like the schema panel */
 .side.stats .filters, .side.stats .qlist { display: none; }
 #stats { flex: 1; overflow: auto; margin-top: 12px; border-top: 1px solid var(--line); padding: 12px 16px 24px max(16px, env(safe-area-inset-left, 0px)); }
@@ -172,6 +190,7 @@ body.resizing { cursor: col-resize; user-select: none; }
   padding: 16px max(16px, env(safe-area-inset-right, 0px)) 24px 16px; font: 13px/1.45 var(--f-mono); }
 .schema .sh { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; font-family: var(--f-body); }
 .schema .sh b { font-size: 14px; }
+#closeDrawer { margin-left: auto; }   /* stays right when the Schema | Diagram switch is hidden (Czech practice) */
 .schema .defs { margin: 0 0 16px; font: 12.5px/1.5 var(--f-body); color: var(--muted); }
 .schema .defs p { margin: 0 0 4px; }
 .schema .defs summary { cursor: pointer; color: var(--ink); font-weight: 600; margin-bottom: 4px; list-style: none; }
@@ -357,8 +376,10 @@ import { PGlite } from './pglite/index.js';
 import velo from './velo.js';
 import ace from './ace.js';
 import pulse from './pulse.js';
+import czgram from './czgram.js';
+import czvocab from './czvocab.js';
 
-const DBS = [velo, pulse, ace];
+const DBS = [velo, pulse, ace, czgram, czvocab];
 const PLANNED = ['Batch 4', 'Batch 5'];
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -398,6 +419,12 @@ async function boot() {
 }
 
 async function loadDb(db) {
+  if (db.kind === 'cz') {   // Czech practice: no tables, no engine
+    renderSchema(); renderList(); openQuestion(startIndex());
+    centerCurrent();
+    return;
+  }
+  if (!state.pg) return;    // engine still starting; boot() loads the chosen database when it is ready
   $('engine').textContent = 'Building ' + db.name + '…'; $('engine').className = 'pill'; $('engine').hidden = false;
   $('loadmsg') && ($('loadmsg').textContent = 'Creating tables and loading data…');
   const schema = 's_' + db.id;
@@ -501,7 +528,15 @@ function renderList() {
 }
 
 function renderSchema() {
-  const db = state.db;
+  const db = state.db, cz = db.kind === 'cz';
+  $('smode').hidden = cz; $('tfilter').hidden = cz;
+  if (cz) {
+    $('tpane').hidden = false; $('epane').hidden = true; $('drawer').classList.remove('diagram');
+    const q = db.questions[state.idx] || db.questions[0];
+    renderCzRule(q.g);
+    return;
+  }
+  setSchemaMode(store.get('schemaMode', 'tables'));
   const ref = (n) => { const m = /→ (\w+)/.exec(n); return m ? '→ ' + m[1].replace(/\.\w+$/, '') : ''; };
   $('dbody').innerHTML = `<details class="defs" id="defsBox"${store.get('notesOpen', true) ? ' open' : ''}><summary>Notes</summary>${db.notes.map((n) => `<p>${n}</p>`).join('')}</details>` +
     db.schema.map((t) => `<table data-t="${t.table}"><thead><tr><th colspan="2">${t.table}</th></tr></thead><tbody>${t.cols.map((c) =>
@@ -546,6 +581,75 @@ function wireRate(i) {
 }
 
 // Theory card: write your own answer, then compare with the model answer. No auto-check.
+// ---------- Czech practice ----------
+// Lesson of a topic in the right panel, so the rule stays in view while answering.
+function renderCzRule(g) {
+  const lesson = state.db.questions.find((x) => x.g === g && x.k === 'lesson');
+  $('dbody').innerHTML = lesson ? `<div class="lesson"><h4>${esc(g)}</h4>${lesson.p}</div>` : '';
+}
+const navHtml = (i, n) => `<div class="nav">
+      <button class="btn" type="button" id="prevBtn" ${i === 0 ? 'disabled' : ''}>← Previous</button>
+      ${rateHtml(i)}
+      <button class="btn" type="button" id="nextBtn" ${i === n - 1 ? 'disabled' : ''}>Next →</button>
+    </div>`;
+function wireNav(i) {
+  wireRate(i);
+  $('prevBtn').onclick = () => openQuestion(i - 1);
+  $('nextBtn').onclick = () => openQuestion(i + 1);
+  renderList();
+  const cur = document.querySelector('.qlist [aria-current="true"]');
+  cur && cur.scrollIntoView({ block: 'nearest' });
+  window.scrollTo({ top: 0 });
+}
+// Lesson card: theory first; "Done" marks it read and moves on to the first drill.
+function openLesson(i, q, n) {
+  renderCzRule(q.g);
+  $('work').innerHTML = `
+    <p class="prompt"><b>${i + 1}.</b> ${esc(q.t)}</p>
+    ${navHtml(i, n)}
+    <div class="lesson">${q.p}</div>
+    <div><button class="btn primary" type="button" id="doneBtn">Done — start the exercises</button></div>`;
+  $('doneBtn').onclick = () => { solved.add(key(i)); store.set('solved', [...solved]); openQuestion(Math.min(i + 1, n - 1)); };
+  wireNav(i);
+}
+// Answers: case and spacing don't matter, diacritics do.
+const czNorm = (s) => String(s).trim().replace(/\s+/g, ' ').replace(/[.!?,;:]+$/, '').toLocaleLowerCase('cs');
+const noDia = (s) => s.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+function openCz(i, q, n, draft) {
+  renderCzRule(q.g);
+  $('work').innerHTML = `
+    <p class="prompt"><b>${i + 1}.</b> ${q.p.replace('___', '<span class="gap"></span>')}</p>
+    <div class="helpers">
+      <details class="box"><summary>Hint</summary><div class="in"><div>${q.h}</div></div></details>
+      <details class="box"><summary>Answer</summary><div class="in"><div>${q.w}</div></div></details>
+    </div>
+    ${navHtml(i, n)}
+    <div class="editor">
+      <div class="bar"><span class="lbl"></span><button class="btn primary" type="button" id="czCheck">Submit</button></div>
+      <input id="czin" class="czin" type="text" autocomplete="off" spellcheck="false" lang="cs" aria-label="Your answer" placeholder="Type the missing word(s)" value="${esc(draft)}">
+    </div>
+    <div class="results" id="results"></div>`;
+  const inp = $('czin');
+  inp.addEventListener('input', () => store.set('draft.' + key(i), inp.value));
+  inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') check(); });
+  const check = () => {
+    const mine = czNorm(inp.value);
+    if (!mine) return;
+    const answers = q.a.map(czNorm);
+    if (answers.includes(mine)) {
+      solved.add(key(i)); store.set('solved', [...solved]); renderList();
+      $('results').innerHTML = `<div class="verdict ok"><span class="tag">Správně</span><p>${q.w}</p></div>`;
+    } else if (answers.some((a) => noDia(a) === noDia(mine))) {
+      $('results').innerHTML = `<div class="verdict warn"><span class="tag">Almost</span><p>The letters are right — check the diacritics (háčky a čárky) and try again.</p></div>`;
+    } else {
+      $('results').innerHTML = `<div class="verdict bad"><span class="tag">Not yet</span><p>Correct: <b>${esc(q.a[0])}</b>${q.a.length > 1 ? ` (also: ${q.a.slice(1).map(esc).join(', ')})` : ''}. ${q.w}</p></div>`;
+    }
+  };
+  $('czCheck').onclick = check;
+  wireNav(i);
+  inp.focus();
+}
+
 function openTheory(i, q, n, draft) {
   $('work').innerHTML = `
     <p class="prompt"><b>${i + 1}.</b> ${esc(q.p)}</p>
@@ -574,8 +678,11 @@ function openQuestion(i) {
   const q = state.db.questions[i], n = state.db.questions.length;
   const draft = store.get('draft.' + key(i), '');
   if (q.k === 'theory') return openTheory(i, q, n, draft);
+  if (q.k === 'lesson') return openLesson(i, q, n);
+  if (q.k === 'cz') return openCz(i, q, n, draft);
+  const czTip = q.cz ? `<span class="czt" tabindex="0" aria-label="Czech translation">CZ<span class="tip">${q.cz}</span></span>` : '';
   $('work').innerHTML = `
-    <p class="prompt"><b>${i + 1}.</b> ${q.p}</p>
+    <p class="prompt"><b>${i + 1}.</b>${czTip} ${q.p}</p>
     <div class="helpers">
       <details class="box"><summary>Hint</summary><div class="in"><div>${esc(q.h)}</div></div></details>
       <details class="box" id="solbox"><summary>Solution</summary><div class="in"><pre class="sol">${esc(q.s)}</pre>
@@ -708,7 +815,7 @@ $('fdiff').onclick = (e) => {
   const d = b.dataset.d; state.diff.has(d) ? state.diff.delete(d) : state.diff.add(d);
   b.setAttribute('aria-pressed', state.diff.has(d)); renderList();
 };
-$('qlist').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b && state.pg) openQuestion(+b.dataset.i); };
+$('qlist').onclick = (e) => { const b = e.target.closest('[data-i]'); if (b && (state.pg || state.db.kind === 'cz')) openQuestion(+b.dataset.i); };
 const wide = () => window.matchMedia('(min-width: 1201px)').matches;
 const drawer = (open) => {
   $('drawer').hidden = !open;
@@ -753,19 +860,24 @@ function statCell(qs, f = {}) {
 }
 function renderStats() {
   const all = DBS.flatMap((db, di) => db.questions.map((q, i) => ({ db: di, g: q.g, d: q.d, k: db.id + ':' + (i + 1) })));
-  const topics = [...new Set(all.map((x) => x.g))];
-  const head = (rate) => `<tr><th>${rate ? 'Topic' : 'Level'}</th>${DBS.map((d) => `<th>${esc(d.name.split(' ')[0])}</th>`).join('')}<th>Total</th>${rate ? '<th>Rate</th>' : ''}</tr>`;
   const avgRate = (qs) => { const r = qs.map((x) => store.get('rate.' + x.k, 0)).filter(Boolean); return r.length ? (r.reduce((a, b) => a + b, 0) / r.length).toFixed(1) : '&mdash;'; };
-  const line = (label, qs, f, rate) => `<tr${label === 'All' ? ' class="sum"' : ''}><td class="t">${esc(label)}</td>${
-    DBS.map((_, di) => statCell(qs.filter((x) => x.db === di), { ...f, db: di })).join('')}${statCell(qs)}${rate ? `<td>${avgRate(qs)}</td>` : ''}</tr>`;
-  $('stats').innerHTML = `<h3>By topic</h3><p>Solved / total on this laptop. Click a cell to practise its unsolved questions. Rate = your average usefulness rating.</p>
-    <table><thead>${head(true)}</thead><tbody>${topics.map((g) => line(g, all.filter((x) => x.g === g), { g }, true)).join('')}${line('All', all, {}, true)}</tbody></table>
-    <h3>By difficulty</h3><table><thead>${head(false)}</thead><tbody>${['Easy', 'Medium', 'Hard'].map((d) => line(d, all.filter((x) => x.d === d), { d }, false)).join('')}</tbody></table>
+  const group = (title, idx) => {
+    const sub = all.filter((x) => idx.includes(x.db)), topics = [...new Set(sub.map((x) => x.g))];
+    const head = (first, rate) => `<tr><th>${first}</th>${idx.map((di) => `<th>${esc(DBS[di].kind === 'cz' ? DBS[di].name.split(' ').pop() : DBS[di].name.split(' ')[0])}</th>`).join('')}${idx.length > 1 ? '<th>Total</th>' : ''}${rate ? '<th>Rate</th>' : ''}</tr>`;
+    const line = (label, qs, f, rate) => `<tr${label === 'All' ? ' class="sum"' : ''}><td class="t">${esc(label)}</td>${
+      idx.map((di) => statCell(qs.filter((x) => x.db === di), { ...f, db: di })).join('')}${idx.length > 1 ? statCell(qs) : ''}${rate ? `<td>${avgRate(qs)}</td>` : ''}</tr>`;
+    return `<h3>${title} · by topic</h3>
+      <table><thead>${head('Topic', true)}</thead><tbody>${topics.map((g) => line(g, sub.filter((x) => x.g === g), { g }, true)).join('')}${line('All', sub, {}, true)}</tbody></table>
+      <h3>${title} · by difficulty</h3><table><thead>${head('Level', false)}</thead><tbody>${['Easy', 'Medium', 'Hard'].map((d) => line(d, sub.filter((x) => x.d === d), { d }, false)).join('')}</tbody></table>`;
+  };
+  const ids = (cz) => DBS.map((_, i) => i).filter((i) => (DBS[i].kind === 'cz') === cz);
+  $('stats').innerHTML = `<p>Solved / total on this laptop. Click a cell to practise its unsolved questions. Rate = your average usefulness rating.</p>
+    ${group('SQL', ids(false))}${group('Čeština', ids(true))}
     <p>Other laptop: import its code with the Progress button first to see everything here.</p>`;
 }
 // Cell click: open that database with the list filtered to the cell's topic / difficulty, unsolved only.
 $('stats').onclick = async (e) => {
-  const c = e.target.closest('td.c'); if (!c || !state.pg) return;
+  const c = e.target.closest('td.c'); if (!c || (!state.pg && DBS[+c.dataset.db].kind !== 'cz')) return;
   const di = +c.dataset.db;
   state.topic = c.dataset.g || 'all'; $('ftopic').value = state.topic;
   state.status = 'todo'; $('fstatus').value = 'todo';

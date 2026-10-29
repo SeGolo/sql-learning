@@ -66,6 +66,9 @@ def build(dbid, name, tagline, sql_file, qmod, schema, notes):
                 schema=[dict(table=t, about=a, cols=[dict(c=c, t=ty, n=n) for c, ty, n in cols]) for t, a, cols in schema],
                 notes=notes,
                 questions=[dict(t=q['t'], d=q['d'], g=q['g'], p=q['p'], h=q['h'], s=q['s'], o=q['o'], k=q.get('k', 'sql'), a=q.get('a', '')) for q in Q])
+    if dbid == 'velo':   # Czech prompts for the hover tooltip (velo_cz.py); build_cz.py adds them without a full rebuild
+        import velo_cz
+        for n, q in enumerate(data['questions'], 1): q['cz'] = velo_cz.CZ[n]
     with open(f'site/{dbid}.js', 'w', encoding='utf-8') as f:
         f.write('export default ' + json.dumps(data, ensure_ascii=False) + ';\n')
     print(dbid, len(Q), 'questions', os.path.getsize(f'site/{dbid}.js'), 'bytes')
