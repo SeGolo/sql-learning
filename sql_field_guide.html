@@ -359,7 +359,7 @@
       --border:#283541;--border-strong:#283541;--accent:#82b2e2;--accent-soft:#1c2d3f;--sql-ink:#e2e9f0;--code-ink:#e2e9f0;
     }
   }
-  html.embed body{font-size:14px;line-height:1.5}
+  html.embed body{font-size:13px;line-height:1.5}
   html.embed .wrap{padding:0 .75rem 1.5rem}
   /* header: no title block, just the chips + search, pinned to the top */
   html.embed header.masthead{position:sticky;top:0;z-index:5;background:var(--ground);margin:0 0 1rem;padding:.6rem 0 .6rem;border-bottom:1px solid var(--border)}
@@ -371,27 +371,28 @@
     border:1px solid var(--border-strong);border-radius:8px;padding:.35rem .6rem}
   .search:focus{outline:2px solid var(--accent);outline-offset:0}
   html.embed section,html.embed .callout{scroll-margin-top:6.5rem;margin-bottom:1.4rem}
-  html.embed h2{font-family:var(--sans);font-size:15px;font-weight:400;letter-spacing:0}
+  html.embed h2{font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0}
   html.embed h2 .num{font-size:.75rem}
-  html.embed section > p.intro{font-size:.85rem;margin-bottom:.7rem}
+  html.embed section > p.intro{font-size:13px;margin-bottom:.7rem}
   /* tables become a stacked list: one item per row, no sideways scroll */
   html.embed .tablecard{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
   html.embed table{min-width:0}
   html.embed table,html.embed tbody,html.embed tr,html.embed td{display:block;width:auto}
   html.embed thead{display:none}
   html.embed tbody tr{border-bottom:1px solid var(--border);padding:.5rem 0}   /* list items, one hairline between them */
-  html.embed tbody td{padding:.15rem 0;border:0;font-size:.84rem;max-width:none}
+  html.embed tbody td{padding:.15rem 0;border:0;font-size:13px;max-width:none}
   html.embed tbody tr:hover td{background:none}
   /* item name = bold blue text */
-  html.embed td.term{font-size:.82rem;font-weight:600;white-space:normal;color:var(--accent)}
+  html.embed td.term{font-size:13px;font-weight:600;white-space:normal;color:var(--accent)}
   /* code examples: black regular mono, no frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
-    padding:.2rem 0;color:var(--sql-ink);font-weight:400}
-  html.embed td.miss{font-size:.8rem}
+    padding:.2rem 0;color:var(--sql-ink);font-weight:400;font-size:13px}
+  html.embed td.miss{font-size:13px}
   html.embed td.miss::before{content:"Mistake: ";color:var(--warn);font-weight:600}
-  html.embed .note{font-size:.84rem}
+  html.embed .note{font-size:13px}
   /* section 08 is a tinted callout in the standalone guide; here it looks like every other section */
   html.embed .callout{background:none;border:0;border-radius:0;padding:0}
+  html.embed .callout ul,html.embed .callout > p{font-size:13px!important}
   html.embed footer{display:none}
   /* search: hide what doesn't match (the script also opens collapsed sections while a search is typed) */
   .nomatch{display:none!important}
