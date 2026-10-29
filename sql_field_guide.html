@@ -374,17 +374,16 @@
   html.embed h2{font-family:var(--sans);font-size:15px;font-weight:400;letter-spacing:0}
   html.embed h2 .num{font-size:.75rem}
   html.embed section > p.intro{font-size:.85rem;margin-bottom:.7rem}
-  /* tables become stacked cards: one card per row, no sideways scroll; the name is the card's blue header strip */
+  /* tables become a stacked list: one item per row, no sideways scroll */
   html.embed .tablecard{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
   html.embed table{min-width:0}
   html.embed table,html.embed tbody,html.embed tr,html.embed td{display:block;width:auto}
   html.embed thead{display:none}
-  html.embed tbody tr{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:.55rem}
-  html.embed tbody td{padding:.2rem .7rem;border:0;font-size:.84rem;max-width:none}
-  html.embed tbody td:last-child{padding-bottom:.55rem}
+  html.embed tbody tr{border-bottom:1px solid var(--border);padding:.5rem 0}   /* list items, one hairline between them */
+  html.embed tbody td{padding:.15rem 0;border:0;font-size:.84rem;max-width:none}
   html.embed tbody tr:hover td{background:none}
-  /* quiet cards: name = bold blue text over a hairline */
-  html.embed td.term{font-size:.82rem;font-weight:600;white-space:normal;color:var(--accent);padding:.4rem .7rem .3rem;border-bottom:1px solid var(--border);margin-bottom:.3rem}
+  /* item name = bold blue text */
+  html.embed td.term{font-size:.82rem;font-weight:600;white-space:normal;color:var(--accent)}
   /* code examples: black regular mono, no frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
     padding:.2rem 0;color:var(--sql-ink);font-weight:400}
