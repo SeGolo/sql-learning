@@ -375,8 +375,9 @@
   .searchclear:hover{color:var(--ink)}
   .search:focus{outline:2px solid var(--accent);outline-offset:0}
   html.embed section,html.embed .callout{scroll-margin-top:6.5rem;margin-bottom:1.4rem}
-  html.embed h2{font-family:var(--sans);font-size:14px;font-weight:600;letter-spacing:0}
-  html.embed h2 .num{font-size:.75rem;font-weight:600;color:var(--ink)}
+  html.embed h2{font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:.02em;text-transform:uppercase}
+  html.embed h2 .toggle{text-transform:none;letter-spacing:0}   /* keep the hide/show button as it was */
+  html.embed h2 .num{font-size:.75rem;font-weight:400;color:var(--ink)}
   html.embed section > p.intro{font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:.4rem;max-width:none}
   /* tables become a stacked list: one item per row, no sideways scroll */
   html.embed .tablecard{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
@@ -388,7 +389,7 @@
   html.embed tbody td{padding:2px 0;border:0;font-size:13px;line-height:1.6;max-width:none}
   html.embed tbody tr:hover td{background:none}
   /* item name = like a table name in the Gym schema panel: mono 13px, dark ink, hairline under it */
-  html.embed td.term{font-family:var(--mono);font-size:13px;font-weight:600;white-space:normal;color:var(--ink);
+  html.embed td.term{font-family:var(--mono);font-size:13px;font-weight:400;white-space:normal;color:var(--ink);
     border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:6px}
   /* code examples: black regular mono, no frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
