@@ -313,6 +313,8 @@
   .note ul{margin:.5rem 0 0;padding-left:1.15rem}
   .note li{margin:.4rem 0}
   .note code{font-family:var(--mono);font-size:.86em;color:var(--accent)}  /* inline code inside a note = teal mono */
+  .note pre{margin:.5rem 0;font-family:var(--mono);font-size:.78rem;line-height:1.55;color:var(--code-ink);background:var(--surface-2);
+    border:1px solid var(--border);border-radius:8px;padding:.55rem .7rem;overflow-x:auto}  /* SQL block inside a note, same look as table examples */
 
   /* EXPAND / COLLAPSE - the "hide" / "show" button that the script at the
      bottom of the file drops into every section's <h2>. */
@@ -656,6 +658,25 @@ WHERE n1.number * n2.number &gt; 11</pre></td>
         <li><b>Second copy is shown in the output</b> (a pair, e.g. <code>num1, num2</code> &mdash; Self-join 4) &rarr; use <code>&lt;</code> or <code>&gt;</code>. <code>(2,7)</code> and <code>(7,2)</code> are the same pair, so <code>&lt;</code> keeps one ordering and also removes self-pairs.</li>
         <li><b>Second copy is only a test</b> ("does another row exist where&hellip;?" &mdash; only the first copy is output &mdash; Self-join 3) &rarr; use <code>&lt;&gt;</code>. You need "any other row", and every row must be able to play the first-copy part, so <code>&lt;</code> would silently drop some.</li>
         <li>Set-theory view: <code>&lt;</code> yields each <b>unordered</b> pair <code>{a, b}</code> once; <code>&lt;&gt;</code> yields every <b>ordered</b> pair <code>(a, b)</code> with <code>a &ne; b</code> &mdash; both directions.</li>
+      </ul>
+    </div>
+
+    <!-- NOTE: rules for ordering a chain of JOINs -->
+    <div class="note">
+      <b>Ordering JOIN chains</b>
+      <ul>
+        <li><b>Start <code>FROM</code> the table that holds what you're measuring.</b> Revenue comes from quantity &times; price, so start with <code>order_items</code>. That table is your &ldquo;fact&rdquo; table.</li>
+        <li><b>Each <code>ON</code> may only use tables that are already introduced.</b> SQL reads top-down, so <code>ON</code> can reference the new table plus anything above it, never anything below it.
+<pre>FROM order_items oi
+JOIN orders o     ON o.order_id = oi.order_id        -- oi is above ✔
+JOIN products pr  ON pr.product_id = oi.product_id   -- oi is above ✔
+JOIN categories c ON c.category_id = pr.category_id  -- pr is above ✔</pre>
+          Classic bug: <code>o.order_id = pr.order_id</code>, which uses <code>pr</code> before it exists.</li>
+        <li><b>Follow the foreign keys like a path.</b> Ask &ldquo;which column links the new table to something I already have?&rdquo; If nothing links yet, join the bridge table first. Categories can only be reached through products, so products must come before categories.</li>
+        <li><b>Write <code>ON</code> as <code>new.key = existing.key</code>.</b> Put the new table on the left of <code>=</code> every time. Then you can see at a glance that the right side points to a table above. (The order inside <code>ON</code> doesn't change the result; it's only a readability habit.)</li>
+        <li><b>Draw the path before writing.</b> For example: <code>categories &larr; products &larr; order_items &rarr; orders</code>. Start in the middle (the fact table) and walk outward along the arrows, one JOIN per arrow.</li>
+        <li><b>Use short, distinct aliases and stick to them.</b> For example <code>oi</code>, <code>o</code>, <code>p</code>, <code>cat</code>. After writing the query, check that every alias in <code>SELECT</code>, <code>WHERE</code> and <code>GROUP BY</code> appears in <code>FROM</code>/<code>JOIN</code>.</li>
+        <li><b>Quick check:</b> read each <code>ON</code> line and ask whether both aliases are defined at or above that line. If one isn't, the line is in the wrong place or uses the wrong alias.</li>
       </ul>
     </div>
   </section>
