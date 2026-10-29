@@ -56,6 +56,21 @@ body:not(:has(.shell.noside)) #sideBtn { display: none; }
 /* List panel: Questions | Guide toggle; Guide shows the SQL Field Guide in an iframe. */
 .sidehead { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 12px 16px 0 max(16px, env(safe-area-inset-left, 0px)); }
 .side.guide .filters, .side.guide .qlist { display: none; }
+/* Stats tab: solved / total per topic and database, thin grid like the schema panel */
+.side.stats .filters, .side.stats .qlist { display: none; }
+#stats { flex: 1; overflow: auto; margin-top: 12px; border-top: 1px solid var(--line); padding: 12px 16px 24px max(16px, env(safe-area-inset-left, 0px)); }
+#stats h3 { margin: 0 0 6px; font: 600 13px var(--f-body); }
+#stats p { margin: 0 0 12px; font-size: 12.5px; color: var(--muted); }
+#stats table { width: 100%; border-collapse: collapse; margin: 0 0 18px; font: 12.5px/1.35 var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
+#stats th, #stats td { border: 1px solid var(--line); padding: 4px 6px; text-align: left; vertical-align: top; font-weight: 400; }
+#stats th { color: var(--ink); font-weight: 600; }
+#stats td.t { color: var(--ink); }
+#stats td.c { cursor: pointer; white-space: nowrap; }
+#stats td.c:hover { background: var(--accent-soft); }
+#stats td.none { color: var(--line); }
+#stats tr.sum td { color: var(--ink); font-weight: 600; }
+#stats .sb { height: 3px; margin-top: 3px; background: var(--sunk); }
+#stats .sb i { display: block; height: 100%; background: var(--ok); }
 #guide { flex: 1; width: 100%; border: 0; margin-top: 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .dbpick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 select { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; }
@@ -281,7 +296,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
   <aside class="side" aria-label="Questions">
     <div class="resizer qres" id="qresizer" title="Drag to resize"></div>
     <div class="sidehead"><div class="seg" id="lmode" role="group" aria-label="List panel view">
-      <button type="button" data-m="questions" aria-pressed="true">Questions</button><button type="button" data-m="guide" aria-pressed="false">Guide</button></div>
+      <button type="button" data-m="questions" aria-pressed="true">Questions</button><button type="button" data-m="guide" aria-pressed="false">Guide</button><button type="button" data-m="stats" aria-pressed="false">Stats</button></div>
       <span><button class="linkbtn" id="guideAll" type="button" hidden>Expand all</button><button class="linkbtn" id="sideHide" type="button">Hide</button></span></div>
     <div class="filters">
       <div class="row">
@@ -298,6 +313,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
     </div>
     <ul class="qlist" id="qlist"></ul>
     <iframe id="guide" title="SQL Field Guide" hidden></iframe>
+    <div id="stats" hidden></div>
   </aside>
 
   <main class="work" id="work">
@@ -472,6 +488,7 @@ function renderList() {
   const n = state.db.questions.length, done = state.db.questions.filter((_, i) => solved.has(key(i))).length;
   $('metertxt').textContent = `${done} / ${n} · ${Math.round(100 * done / n)}%`;
   $('meterbar').style.width = (100 * done / n) + '%';
+  if (!$('stats').hidden) renderStats();
 }
 
 function renderSchema() {
@@ -709,11 +726,47 @@ async function guideUrl() {
 }
 async function setListMode(m) {
   document.querySelector('.side').classList.toggle('guide', m === 'guide');
+  document.querySelector('.side').classList.toggle('stats', m === 'stats');
+  $('stats').hidden = m !== 'stats';
+  if (m === 'stats') renderStats();
   $('guide').hidden = m !== 'guide'; $('guideAll').hidden = m !== 'guide';
   $('lmode').querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
   store.set('listMode', m);
   if (m === 'guide' && !$('guide').src) $('guide').src = (await guideUrl()) + '?embed=1';
 }
+// ---------- stats: solved / total per topic x database, difficulty split, average rating ----------
+// A cell is clickable when it names a database; f = { db, g (topic), d (difficulty) } describes the filter it opens.
+function statCell(qs, f = {}) {
+  if (!qs.length) return '<td class="none">&mdash;</td>';
+  const done = qs.filter((x) => solved.has(x.k)).length;
+  const attrs = f.db === undefined ? '' : ` class="c" data-db="${f.db}"${f.g ? ` data-g="${esc(f.g)}"` : ''}${f.d ? ` data-d="${f.d}"` : ''}`;
+  return `<td${attrs}>${done}/${qs.length}<div class="sb"><i style="width:${100 * done / qs.length}%"></i></div></td>`;
+}
+function renderStats() {
+  const all = DBS.flatMap((db, di) => db.questions.map((q, i) => ({ db: di, g: q.g, d: q.d, k: db.id + ':' + (i + 1) })));
+  const topics = [...new Set(all.map((x) => x.g))];
+  const head = (rate) => `<tr><th>${rate ? 'Topic' : 'Level'}</th>${DBS.map((d) => `<th>${esc(d.name.split(' ')[0])}</th>`).join('')}<th>Total</th>${rate ? '<th>Rate</th>' : ''}</tr>`;
+  const avgRate = (qs) => { const r = qs.map((x) => store.get('rate.' + x.k, 0)).filter(Boolean); return r.length ? (r.reduce((a, b) => a + b, 0) / r.length).toFixed(1) : '&mdash;'; };
+  const line = (label, qs, f, rate) => `<tr${label === 'All' ? ' class="sum"' : ''}><td class="t">${esc(label)}</td>${
+    DBS.map((_, di) => statCell(qs.filter((x) => x.db === di), { ...f, db: di })).join('')}${statCell(qs)}${rate ? `<td>${avgRate(qs)}</td>` : ''}</tr>`;
+  $('stats').innerHTML = `<h3>By topic</h3><p>Solved / total on this laptop. Click a cell to practise its unsolved questions. Rate = your average usefulness rating.</p>
+    <table><thead>${head(true)}</thead><tbody>${topics.map((g) => line(g, all.filter((x) => x.g === g), { g }, true)).join('')}${line('All', all, {}, true)}</tbody></table>
+    <h3>By difficulty</h3><table><thead>${head(false)}</thead><tbody>${['Easy', 'Medium', 'Hard'].map((d) => line(d, all.filter((x) => x.d === d), { d }, false)).join('')}</tbody></table>
+    <p>Other laptop: import its code with the Progress button first to see everything here.</p>`;
+}
+// Cell click: open that database with the list filtered to the cell's topic / difficulty, unsolved only.
+$('stats').onclick = async (e) => {
+  const c = e.target.closest('td.c'); if (!c || !state.pg) return;
+  const di = +c.dataset.db;
+  state.topic = c.dataset.g || 'all'; $('ftopic').value = state.topic;
+  state.status = 'todo'; $('fstatus').value = 'todo';
+  state.diff = new Set(c.dataset.d ? [c.dataset.d] : []);
+  $('fdiff').querySelectorAll('[data-d]').forEach((b) => b.setAttribute('aria-pressed', state.diff.has(b.dataset.d)));
+  await setListMode('questions');
+  if (DBS[di] !== state.db) { $('db').value = di; state.db = DBS[di]; await loadDb(state.db); }
+  const first = filtered()[0];
+  if (first) openQuestion(first.i); else renderList();
+};
 // Expand / collapse every guide section; the guide reports its state back so the label stays right.
 $('guideAll').onclick = () => { try { $('guide').contentWindow.postMessage({ sqlguide: 'setAll', open: $('guideAll').textContent === 'Expand all' }, '*'); } catch {} };
 window.addEventListener('message', (e) => {
