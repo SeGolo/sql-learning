@@ -383,17 +383,11 @@
   html.embed tbody td{padding:.2rem .7rem;border:0;font-size:.84rem;max-width:none}
   html.embed tbody td:last-child{padding-bottom:.55rem}
   html.embed tbody tr:hover td{background:none}
-  /* quiet cards: name = bold blue text over a hairline, code = plain mono with a thin blue line on its left */
+  /* quiet cards: name = bold blue text over a hairline */
   html.embed td.term{font-size:.82rem;font-weight:600;white-space:normal;color:var(--accent);padding:.4rem .7rem .3rem;border-bottom:1px solid var(--border);margin-bottom:.3rem}
-  /* code examples look like the Gym editor: black regular mono, grey line-number gutter, thin frame.
-     The script below wraps each line in <span class="l">; the numbers come from a CSS counter. */
+  /* code examples: black regular mono in a thin frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:var(--surface);border:1px solid var(--border);border-radius:4px;
-    padding:0;color:var(--sql-ink);font-weight:400;counter-reset:ln}
-  html.embed pre .l{display:block;counter-increment:ln;padding-right:.7rem}
-  html.embed pre .l::before{content:counter(ln);display:inline-block;width:2.2em;margin-right:.7rem;padding-right:.5em;text-align:right;
-    color:#8a96a3;background:var(--surface-2);border-right:1px solid var(--border)}
-  html.embed pre .l:first-child::before{padding-top:.25rem}
-  html.embed pre .l:last-child::before{padding-bottom:.25rem}
+    padding:.4rem .7rem;color:var(--sql-ink);font-weight:400}
   html.embed td.miss{font-size:.8rem}
   html.embed td.miss::before{content:"Mistake: ";color:var(--warn);font-weight:600}
   html.embed .note{font-size:.84rem}
@@ -1009,14 +1003,6 @@ SELECT * FROM ranked</pre></td>
     });
 
     // search: match against each card (table row), note bullet and callout; sections are opened while searching
-    // number the lines of every code example (blank first/last lines dropped)
-    document.querySelectorAll('td.code pre, .note pre').forEach(function (pre) {
-      var lines = pre.innerHTML.split('\n');
-      while (lines.length && !lines[0].trim()) lines.shift();
-      while (lines.length && !lines[lines.length - 1].trim()) lines.pop();
-      pre.innerHTML = lines.map(function (t) { return '<span class="l">' + (t || ' ') + '</span>'; }).join('');
-    });
-
     var input = document.getElementById('search');
     var before = null;   // which sections were open before the search started
     input.addEventListener('input', function () {
