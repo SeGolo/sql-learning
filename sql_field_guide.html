@@ -364,9 +364,8 @@
   /* header: no title block, just the chips + search, pinned to the top */
   html.embed header.masthead{position:sticky;top:0;z-index:5;background:var(--ground);margin:0 0 1rem;padding:.6rem 0 .6rem;border-bottom:1px solid var(--border)}
   html.embed .eyebrow,html.embed h1,html.embed .lede{display:none}
-  html.embed nav.toc{margin-top:0;gap:.3rem}
-  html.embed nav.toc a{font-size:.7rem;padding:.15rem .55rem}
-  html.embed .search{display:block}
+  html.embed nav.toc{display:none}   /* no section chips: open sections from their titles or use search */
+  html.embed .search{display:block;margin-top:0}
   .search{display:none;width:100%;margin-top:.5rem;font:.8rem var(--mono);color:var(--ink);background:var(--surface);
     border:1px solid var(--border-strong);border-radius:8px;padding:.35rem .6rem}
   .search:focus{outline:2px solid var(--accent);outline-offset:0}
@@ -389,10 +388,10 @@
   /* code examples: black regular mono, no frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
     padding:.2rem 0;color:var(--sql-ink);font-weight:400;font-size:13px}
-  /* mistake line: grey text, small dark-red label, no bold red inside */
-  html.embed td.miss{font-size:13px;color:var(--muted)}
-  html.embed td.miss::before{content:"\26A0  Mistake: ";color:#9b2c2c;font-weight:500}
-  html.embed td.miss b{color:inherit;font-weight:600}
+  /* mistake line: regular text, small dark-red label, nothing bold */
+  html.embed td.miss{font-size:13px;color:var(--ink);font-weight:400}
+  html.embed td.miss::before{content:"\26A0  Mistake: ";color:#9b2c2c;font-weight:400}
+  html.embed td.miss b{color:inherit;font-weight:400}
   /* inline code inside sentences keeps the text colour; only the font changes */
   html.embed td.use code,html.embed td.miss code,html.embed .note code,html.embed p.intro code{color:inherit}
   html.embed .note{font-size:13px;line-height:1.6;color:var(--ink)}
@@ -995,6 +994,12 @@ SELECT * FROM ranked</pre></td>
     boxes.forEach(function (b) { setOpen(b, open.indexOf(b.id) >= 0); });
     // the hide/show buttons were wired by the script above; save after each click
     document.querySelectorAll('h2 .toggle').forEach(function (btn) { btn.addEventListener('click', save); });
+    // clicking anywhere on a section title works like its hide/show button
+    boxes.forEach(function (b) {
+      var h2 = b.querySelector('h2');
+      h2.style.cursor = 'pointer';
+      h2.addEventListener('click', function (e) { if (!e.target.closest('.toggle')) h2.querySelector('.toggle').click(); });
+    });
 
     // chip click: open the section and scroll it to just below the pinned header (its height depends on the panel width)
     var head = document.querySelector('header.masthead');
