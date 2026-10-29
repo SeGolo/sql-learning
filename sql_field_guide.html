@@ -379,21 +379,29 @@
   html.embed h2 .toggle{text-transform:none;letter-spacing:0}   /* keep the hide/show button as it was */
   html.embed h2 .num{font-size:.75rem;font-weight:400;color:var(--ink)}
   html.embed section > p.intro{font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:.4rem;max-width:none}
-  /* tables become a stacked list: one item per row, no sideways scroll */
-  html.embed .tablecard{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
+  /* tables: narrow panel = 2 columns (name | description, code and mistake stacked), thin grey grid like the schema panel */
+  html.embed .tablecard{background:none;border:1px solid var(--border);border-radius:0;box-shadow:none;overflow:visible}
   html.embed table{min-width:0}
-  html.embed table,html.embed tbody,html.embed tr,html.embed td{display:block;width:auto}
   html.embed thead{display:none}
-  /* each item is one block: small gaps inside, a large gap + hairline between items */
-  html.embed tbody tr{padding:14px 0}
-  html.embed tbody td{padding:2px 0;border:0;font-size:13px;line-height:1.6;max-width:none}
+  html.embed tbody tr{display:grid;grid-template-columns:minmax(6.5rem,28%) 1fr;border-bottom:1px solid var(--border)}
+  html.embed tbody tr:last-child{border-bottom:0}
+  html.embed tbody td{display:block;grid-column:2;padding:0 .6rem;border:0;font-size:13px;line-height:1.5;max-width:none;width:auto}
   html.embed tbody tr:hover td{background:none}
-  /* item name = like a table name in the Gym schema panel: mono 13px, dark ink, hairline under it */
-  html.embed td.term{font-family:var(--mono);font-size:13px;font-weight:400;white-space:normal;color:var(--ink);
-    border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:6px}
+  html.embed td.term{grid-column:1;grid-row:1 / span 3;padding:.5rem .6rem;border-right:1px solid var(--border);
+    font-family:var(--mono);font-size:13px;font-weight:400;white-space:normal;color:var(--ink)}
+  html.embed td.use{padding-top:.5rem}
+  html.embed td.miss{padding-bottom:.5rem}
+  /* wide panel = the full 4-column table (Name | What | Example | Mistake), same thin grid */
+  @media (min-width:720px){
+    html.embed thead{display:table-header-group}
+    html.embed thead th{background:none;font-size:11px;padding:.45rem .6rem;border-bottom:1px solid var(--border)}
+    html.embed tbody tr{display:table-row}
+    html.embed tbody td{display:table-cell;padding:.5rem .6rem;border-bottom:1px solid var(--border)}
+    html.embed td.term{border-right:0}
+  }
   /* code examples: black regular mono, no frame */
-  html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
-    padding:.2rem 0;color:var(--sql-ink);font-weight:400;font-size:13px}
+  html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.25rem 0;background:none;border:0;border-radius:0;
+    padding:0;color:var(--sql-ink);font-weight:400;font-size:13px}
   /* mistake line: regular text, only the warning sign is red, nothing bold */
   html.embed td.miss{font-size:13px;color:var(--muted);font-weight:400}
   html.embed td.miss .mw{color:#9b2c2c}
