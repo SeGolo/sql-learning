@@ -38,7 +38,7 @@ code { font-family: var(--f-mono); font-size: .9em; background: var(--sunk); bor
 .top {
   position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
   display: flex; flex-wrap: wrap; align-items: center; gap: 10px 18px;
-  padding-block: 10px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
   background: var(--panel); border-bottom: 1px solid var(--line);
 }
 .brand { font: 700 20px/1 var(--f-display); letter-spacing: .01em; display: flex; align-items: baseline; gap: 8px; }
@@ -72,6 +72,8 @@ body:has(.shell.noside) .lead { width: auto; margin-right: 0; }
 #guide { flex: 1; width: 100%; border: 0; margin-top: 12px; border-top: 1px solid var(--line); background: var(--panel); }
 .dbpick { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--muted); }
 select { background: var(--panel); border: 1px solid var(--line); border-radius: var(--r); padding: 5px 8px; }
+/* top-bar buttons are as tall as the database dropdown (31px); bar padding keeps the bar height unchanged */
+.top .btn { height: 31px; padding-block: 0; display: inline-flex; align-items: center; }
 .meter { display: flex; align-items: center; gap: 8px; font: 500 13px var(--f-mono); color: var(--muted); font-variant-numeric: tabular-nums; }
 .meter .bar { width: 120px; height: 6px; border-radius: 3px; background: var(--sunk); border: 1px solid var(--line); overflow: hidden; }
 .meter .bar i { display: block; height: 100%; width: 0; background: var(--ok); transition: width .3s; }
