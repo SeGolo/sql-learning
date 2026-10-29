@@ -351,7 +351,7 @@
   /* colours follow SQL Gym (white panel, thin grey lines, blue headers), not the guide's own teal */
   html.embed:root{
     --ground:#ffffff;--surface:#ffffff;--surface-2:#f5f7f9;--ink:#15202b;--muted:#566573;
-    --border:#d3dae2;--border-strong:#d3dae2;--accent:#2e5c8a;--accent-soft:#e1eaf4;--sql-ink:#000000;--code-ink:#15202b;
+    --border:#d3dae2;--border-strong:#d3dae2;--accent:#2e5c8a;--accent-soft:#e1eaf4;--sql-ink:#15202b;--code-ink:#15202b;
   }
   @media (prefers-color-scheme:dark){
     html.embed:root:not([data-theme="light"]){
@@ -377,7 +377,7 @@
   html.embed section,html.embed .callout{scroll-margin-top:6.5rem;margin-bottom:1.4rem}
   html.embed h2{font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0}
   html.embed h2 .num{font-size:.75rem}
-  html.embed section > p.intro{font-size:13px;line-height:1.6;color:var(--ink);margin-bottom:.4rem}
+  html.embed section > p.intro{font-size:13px;line-height:1.6;color:var(--muted);margin-bottom:.4rem}
   /* tables become a stacked list: one item per row, no sideways scroll */
   html.embed .tablecard{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
   html.embed table{min-width:0}
@@ -387,19 +387,21 @@
   html.embed tbody tr{padding:14px 0}
   html.embed tbody td{padding:2px 0;border:0;font-size:13px;line-height:1.6;max-width:none}
   html.embed tbody tr:hover td{background:none}
-  /* item name = a heading: sans, regular, dark ink, hairline under it (mono is kept for code only) */
-  html.embed td.term{font-family:var(--sans);font-size:14px;font-weight:400;white-space:normal;color:var(--ink);
+  /* item name = like a table name in the Gym schema panel: mono 13px, dark ink, hairline under it */
+  html.embed td.term{font-family:var(--mono);font-size:13px;font-weight:400;white-space:normal;color:var(--ink);
     border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:6px}
   /* code examples: black regular mono, no frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
     padding:.2rem 0;color:var(--sql-ink);font-weight:400;font-size:13px}
   /* mistake line: regular text, only the warning sign is red, nothing bold */
-  html.embed td.miss{font-size:13px;color:var(--ink);font-weight:400}
+  html.embed td.miss{font-size:13px;color:var(--muted);font-weight:400}
   html.embed td.miss .mw{color:#9b2c2c}
   html.embed td.miss b{color:inherit;font-weight:400}
   /* inline code inside sentences keeps the text colour; only the font changes */
   html.embed td.use code,html.embed td.miss code,html.embed .note code,html.embed p.intro code{color:inherit}
-  html.embed .note{font-size:13px;line-height:1.6;color:var(--ink)}
+  html.embed .note{font-size:13px;line-height:1.6;color:var(--muted)}
+  /* descriptions use the schema panel's grey, like its column names */
+  html.embed td.use{color:var(--muted)}
   /* section 08 is a tinted callout in the standalone guide; here it looks like every other section */
   html.embed .callout{background:none;border:0;border-radius:0;padding:0}
   html.embed .callout ul,html.embed .callout > p{font-size:13px!important}
