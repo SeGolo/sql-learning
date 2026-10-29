@@ -291,7 +291,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
     <div class="resizer qres" id="qresizer" title="Drag to resize"></div>
     <div class="sidehead"><div class="seg" id="lmode" role="group" aria-label="List panel view">
       <button type="button" data-m="questions" aria-pressed="true">Questions</button><button type="button" data-m="guide" aria-pressed="false">Guide</button></div>
-      <button class="linkbtn" id="sideHide" type="button">Hide</button></div>
+      <span><button class="linkbtn" id="guideAll" type="button" hidden>Expand all</button><button class="linkbtn" id="sideHide" type="button">Hide</button></span></div>
     <div class="filters">
       <div class="row">
         <select id="ftopic" aria-label="Topic"></select>
@@ -718,11 +718,16 @@ async function guideUrl() {
 }
 async function setListMode(m) {
   document.querySelector('.side').classList.toggle('guide', m === 'guide');
-  $('guide').hidden = m !== 'guide';
+  $('guide').hidden = m !== 'guide'; $('guideAll').hidden = m !== 'guide';
   $('lmode').querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
   store.set('listMode', m);
   if (m === 'guide' && !$('guide').src) $('guide').src = (await guideUrl()) + '?embed=1';
 }
+// Expand / collapse every guide section; the guide reports its state back so the label stays right.
+$('guideAll').onclick = () => { try { $('guide').contentWindow.postMessage({ sqlguide: 'setAll', open: $('guideAll').textContent === 'Expand all' }, '*'); } catch {} };
+window.addEventListener('message', (e) => {
+  if (e.data && e.data.sqlguide === 'state' && e.source === $('guide').contentWindow) $('guideAll').textContent = e.data.allOpen ? 'Collapse all' : 'Expand all';
+});
 $('lmode').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) setListMode(b.dataset.m); };
 setListMode(store.get('listMode', 'questions'));
 

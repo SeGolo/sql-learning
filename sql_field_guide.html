@@ -365,9 +365,14 @@
   html.embed header.masthead{position:sticky;top:0;z-index:5;background:var(--ground);margin:0 0 1rem;padding:.6rem 0 .6rem;border-bottom:1px solid var(--border)}
   html.embed .eyebrow,html.embed h1,html.embed .lede{display:none}
   html.embed nav.toc{display:none}   /* no section chips: open sections from their titles or use search */
-  html.embed .search{display:block;margin-top:0}
-  .search{display:none;width:100%;margin-top:.5rem;font:.8rem var(--mono);color:var(--ink);background:var(--surface);
-    border:1px solid var(--border-strong);border-radius:8px;padding:.35rem .6rem}
+  html.embed .searchbox{display:block}
+  .searchbox{display:none;position:relative}
+  .search{display:block;width:100%;font:.8rem var(--mono);color:var(--ink);background:var(--surface);
+    border:1px solid var(--border-strong);border-radius:8px;padding:.35rem 1.9rem .35rem .6rem}
+  .search::-webkit-search-cancel-button{display:none}   /* our own clear button instead */
+  .searchclear{position:absolute;right:.35rem;top:50%;transform:translateY(-50%);border:0;background:none;cursor:pointer;
+    color:var(--muted);font-size:1.1rem;line-height:1;padding:.1rem .3rem}
+  .searchclear:hover{color:var(--ink)}
   .search:focus{outline:2px solid var(--accent);outline-offset:0}
   html.embed section,html.embed .callout{scroll-margin-top:6.5rem;margin-bottom:1.4rem}
   html.embed h2{font-family:var(--sans);font-size:14px;font-weight:400;letter-spacing:0}
@@ -379,18 +384,18 @@
   html.embed table,html.embed tbody,html.embed tr,html.embed td{display:block;width:auto}
   html.embed thead{display:none}
   /* each item is one block: small gaps inside, a large gap + hairline between items */
-  html.embed tbody tr{border-bottom:1px solid var(--border);padding:18px 0}
-  html.embed tbody tr:last-child{border-bottom:0}
+  html.embed tbody tr{padding:14px 0}
   html.embed tbody td{padding:2px 0;border:0;font-size:13px;line-height:1.6;max-width:none}
   html.embed tbody tr:hover td{background:none}
-  /* item name = a heading: sans, semibold, dark ink (mono is kept for code only) */
-  html.embed td.term{font-family:var(--sans);font-size:14px;font-weight:600;white-space:normal;color:var(--ink);margin-bottom:2px}
+  /* item name = a heading: sans, regular, dark ink, hairline under it (mono is kept for code only) */
+  html.embed td.term{font-family:var(--sans);font-size:14px;font-weight:400;white-space:normal;color:var(--ink);
+    border-bottom:1px solid var(--border);padding-bottom:4px;margin-bottom:6px}
   /* code examples: black regular mono, no frame */
   html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
     padding:.2rem 0;color:var(--sql-ink);font-weight:400;font-size:13px}
-  /* mistake line: regular text, small dark-red label, nothing bold */
+  /* mistake line: regular text, only the warning sign is red, nothing bold */
   html.embed td.miss{font-size:13px;color:var(--ink);font-weight:400}
-  html.embed td.miss::before{content:"\26A0  Mistake: ";color:#9b2c2c;font-weight:400}
+  html.embed td.miss .mw{color:#9b2c2c}
   html.embed td.miss b{color:inherit;font-weight:400}
   /* inline code inside sentences keeps the text colour; only the font changes */
   html.embed td.use code,html.embed td.miss code,html.embed .note code,html.embed p.intro code{color:inherit}
@@ -426,7 +431,7 @@
       <a href="#next">Coming next</a>
     </nav>
     <!-- Search box: only shown in embedded mode (see the script at the bottom). -->
-    <input type="search" class="search" id="search" placeholder="Search: null, join, count&hellip;" aria-label="Search the guide">
+    <div class="searchbox"><input type="search" class="search" id="search" placeholder="Search: null, join, count&hellip;" aria-label="Search the guide"><button type="button" class="searchclear" id="searchClear" aria-label="Clear search" hidden>&times;</button></div>
   </header>
 
   <!-- ==========================================================================
@@ -969,8 +974,9 @@ SELECT * FROM ranked</pre></td>
      SCRIPT - embedded mode (sql_field_guide.html?embed=1, used by SQL Gym's side panel):
        1. puts class "embed" on <html> so the compact CSS above applies
        2. sections start collapsed; which ones are open is remembered
-       3. clicking a chip in the top bar opens that section
-       4. the search box hides cards / notes / sections that don't contain the text
+       3. clicking a section title opens or closes it
+       4. the search box hides cards / notes / sections that don't contain the text; its x clears it
+       5. "Expand all / Collapse all" in SQL Gym's panel header opens or closes every section
      ============================================================================ -->
 <script>
   (function () {
@@ -990,8 +996,10 @@ SELECT * FROM ranked</pre></td>
     function save() {
       var ids = boxes.filter(function (b) { return !b.classList.contains('collapsed'); }).map(function (b) { return b.id; });
       try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch (e) {}
+      report();
     }
     boxes.forEach(function (b) { setOpen(b, open.indexOf(b.id) >= 0); });
+    setTimeout(report, 0);   // report() is defined further down
     // the hide/show buttons were wired by the script above; save after each click
     document.querySelectorAll('h2 .toggle').forEach(function (btn) { btn.addEventListener('click', save); });
     // clicking anywhere on a section title works like its hide/show button
@@ -1001,16 +1009,20 @@ SELECT * FROM ranked</pre></td>
       h2.addEventListener('click', function (e) { if (!e.target.closest('.toggle')) h2.querySelector('.toggle').click(); });
     });
 
-    // chip click: open the section and scroll it to just below the pinned header (its height depends on the panel width)
-    var head = document.querySelector('header.masthead');
-    document.querySelectorAll('nav.toc a').forEach(function (a) {
-      a.addEventListener('click', function (e) {
-        var box = document.getElementById(a.getAttribute('href').slice(1));
-        if (!box) return;
-        e.preventDefault();
-        setOpen(box, true); save();
-        window.scrollTo(0, box.getBoundingClientRect().top + window.scrollY - head.offsetHeight - 8);
-      });
+    // "Mistake:" label in front of each mistake; only the warning sign gets the red colour
+    document.querySelectorAll('td.miss').forEach(function (td) {
+      td.insertAdjacentHTML('afterbegin', '<span class="mw">&#9888;</span> Mistake: ');
+    });
+
+    // expand / collapse all: SQL Gym's panel header has the button; it talks to this page with postMessage
+    function report() {
+      var allOpen = boxes.every(function (b) { return !b.classList.contains('collapsed'); });
+      try { parent.postMessage({ sqlguide: 'state', allOpen: allOpen }, '*'); } catch (e) {}
+    }
+    window.addEventListener('message', function (e) {
+      if (!e.data || e.data.sqlguide !== 'setAll') return;
+      boxes.forEach(function (b) { setOpen(b, e.data.open); });
+      save();
     });
 
     // search: match against each card (table row), note bullet and callout; sections are opened while searching
@@ -1035,6 +1047,14 @@ SELECT * FROM ranked</pre></td>
         if (q) setOpen(box, true);
       });
       if (!q && before) { boxes.forEach(function (b) { setOpen(b, before.indexOf(b) >= 0); }); before = null; }
+      clear.hidden = !input.value;
+    });
+    // the x in the search box empties it and shows everything again
+    var clear = document.getElementById('searchClear');
+    clear.addEventListener('click', function () {
+      input.value = '';
+      input.dispatchEvent(new Event('input'));
+      input.focus();
     });
   })();
 </script>
