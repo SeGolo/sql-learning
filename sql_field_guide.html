@@ -348,6 +348,17 @@
      (opened as sql_field_guide.html?embed=1). The script at the bottom
      puts class "embed" on <html>; everything below applies only then.
      ============================================================ */
+  /* colours follow SQL Gym (white panel, thin grey lines, blue headers), not the guide's own teal */
+  html.embed:root{
+    --ground:#ffffff;--surface:#ffffff;--surface-2:#f5f7f9;--ink:#15202b;--muted:#566573;
+    --border:#d3dae2;--border-strong:#d3dae2;--accent:#2e5c8a;--accent-soft:#e1eaf4;--head-ink:#ffffff;--code-ink:#15202b;
+  }
+  @media (prefers-color-scheme:dark){
+    html.embed:root:not([data-theme="light"]){
+      --ground:#151e27;--surface:#151e27;--surface-2:#10171e;--ink:#e2e9f0;--muted:#94a3b2;
+      --border:#283541;--border-strong:#283541;--accent:#82b2e2;--accent-soft:#1c2d3f;--head-ink:#0e141a;--code-ink:#e2e9f0;
+    }
+  }
   html.embed body{font-size:14px;line-height:1.5}
   html.embed .wrap{padding:0 .75rem 1.5rem}
   /* header: no title block, just the chips + search, pinned to the top */
@@ -360,22 +371,26 @@
     border:1px solid var(--border-strong);border-radius:8px;padding:.35rem .6rem}
   .search:focus{outline:2px solid var(--accent);outline-offset:0}
   html.embed section,html.embed .callout{scroll-margin-top:6.5rem;margin-bottom:1.4rem}
-  html.embed h2{font-size:1.1rem}
+  html.embed h2{font-family:var(--sans);font-size:15px;font-weight:600;letter-spacing:0}
+  html.embed h2 .num{font-size:.75rem}
   html.embed section > p.intro{font-size:.85rem;margin-bottom:.7rem}
-  /* tables become stacked cards: one card per row, no sideways scroll */
-  html.embed .tablecard{background:none;border:0;box-shadow:none;overflow:visible}
+  /* tables become stacked cards: one card per row, no sideways scroll; the name is the card's blue header strip */
+  html.embed .tablecard{background:none;border:0;border-radius:0;box-shadow:none;overflow:visible}
   html.embed table{min-width:0}
   html.embed table,html.embed tbody,html.embed tr,html.embed td{display:block;width:auto}
   html.embed thead{display:none}
-  html.embed tbody tr{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.55rem .7rem;margin-bottom:.55rem}
-  html.embed tbody td{padding:.15rem 0;border:0;font-size:.84rem;max-width:none}
+  html.embed tbody tr{background:var(--surface);border:1px solid var(--border);border-radius:6px;overflow:hidden;margin-bottom:.55rem}
+  html.embed tbody td{padding:.2rem .7rem;border:0;font-size:.84rem;max-width:none}
+  html.embed tbody td:last-child{padding-bottom:.55rem}
   html.embed tbody tr:hover td{background:none}
-  html.embed td.term{font-size:.85rem;white-space:normal}
-  html.embed td.code pre{overflow-x:auto;margin:.25rem 0}
+  html.embed td.term,html.embed tbody tr:hover td.term{font-size:.82rem;font-weight:600;white-space:normal;color:var(--head-ink);background:var(--accent);padding:.35rem .7rem;margin-bottom:.25rem}
+  html.embed td.term code{color:inherit}
+  html.embed td.code pre{overflow-x:auto;margin:.25rem 0;border-radius:4px}
   html.embed td.miss{font-size:.8rem}
   html.embed td.miss::before{content:"Mistake: ";color:var(--warn);font-weight:600}
   html.embed .note{font-size:.84rem}
-  html.embed .callout{padding:.9rem 1rem}
+  /* section 08 is a tinted callout in the standalone guide; here it looks like every other section */
+  html.embed .callout{background:none;border:0;border-radius:0;padding:0}
   html.embed footer{display:none}
   /* search: hide what doesn't match (the script also opens collapsed sections while a search is typed) */
   .nomatch{display:none!important}
