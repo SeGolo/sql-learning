@@ -385,9 +385,9 @@
   html.embed tbody tr:hover td{background:none}
   /* quiet cards: name = bold blue text over a hairline */
   html.embed td.term{font-size:.82rem;font-weight:600;white-space:normal;color:var(--accent);padding:.4rem .7rem .3rem;border-bottom:1px solid var(--border);margin-bottom:.3rem}
-  /* code examples: black regular mono in a thin frame */
-  html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:var(--surface);border:1px solid var(--border);border-radius:4px;
-    padding:.4rem .7rem;color:var(--sql-ink);font-weight:400}
+  /* code examples: black regular mono, no frame */
+  html.embed td.code pre,html.embed .note pre{overflow-x:auto;margin:.3rem 0;background:none;border:0;border-radius:0;
+    padding:.2rem 0;color:var(--sql-ink);font-weight:400}
   html.embed td.miss{font-size:.8rem}
   html.embed td.miss::before{content:"Mistake: ";color:var(--warn);font-weight:600}
   html.embed .note{font-size:.84rem}
