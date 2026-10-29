@@ -342,6 +342,43 @@
   @media (max-width:640px){
     td.use,td.miss{max-width:none}
   }
+
+  /* ============================================================
+     EMBEDDED MODE - the guide shown in a narrow side panel of SQL Gym
+     (opened as sql_field_guide.html?embed=1). The script at the bottom
+     puts class "embed" on <html>; everything below applies only then.
+     ============================================================ */
+  html.embed body{font-size:14px;line-height:1.5}
+  html.embed .wrap{padding:0 .75rem 1.5rem}
+  /* header: no title block, just the chips + search, pinned to the top */
+  html.embed header.masthead{position:sticky;top:0;z-index:5;background:var(--ground);margin:0 0 1rem;padding:.6rem 0 .6rem;border-bottom:1px solid var(--border)}
+  html.embed .eyebrow,html.embed h1,html.embed .lede{display:none}
+  html.embed nav.toc{margin-top:0;gap:.3rem}
+  html.embed nav.toc a{font-size:.7rem;padding:.15rem .55rem}
+  html.embed .search{display:block}
+  .search{display:none;width:100%;margin-top:.5rem;font:.8rem var(--mono);color:var(--ink);background:var(--surface);
+    border:1px solid var(--border-strong);border-radius:8px;padding:.35rem .6rem}
+  .search:focus{outline:2px solid var(--accent);outline-offset:0}
+  html.embed section,html.embed .callout{scroll-margin-top:6.5rem;margin-bottom:1.4rem}
+  html.embed h2{font-size:1.1rem}
+  html.embed section > p.intro{font-size:.85rem;margin-bottom:.7rem}
+  /* tables become stacked cards: one card per row, no sideways scroll */
+  html.embed .tablecard{background:none;border:0;box-shadow:none;overflow:visible}
+  html.embed table{min-width:0}
+  html.embed table,html.embed tbody,html.embed tr,html.embed td{display:block;width:auto}
+  html.embed thead{display:none}
+  html.embed tbody tr{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:.55rem .7rem;margin-bottom:.55rem}
+  html.embed tbody td{padding:.15rem 0;border:0;font-size:.84rem;max-width:none}
+  html.embed tbody tr:hover td{background:none}
+  html.embed td.term{font-size:.85rem;white-space:normal}
+  html.embed td.code pre{overflow-x:auto;margin:.25rem 0}
+  html.embed td.miss{font-size:.8rem}
+  html.embed td.miss::before{content:"Mistake: ";color:var(--warn);font-weight:600}
+  html.embed .note{font-size:.84rem}
+  html.embed .callout{padding:.9rem 1rem}
+  html.embed footer{display:none}
+  /* search: hide what doesn't match (the script also opens collapsed sections while a search is typed) */
+  .nomatch{display:none!important}
 </style>
 
 <!-- ============================ VISIBLE CONTENT ============================ -->
@@ -366,6 +403,8 @@
       <a href="#order">Execution order</a>
       <a href="#next">Coming next</a>
     </nav>
+    <!-- Search box: only shown in embedded mode (see the script at the bottom). -->
+    <input type="search" class="search" id="search" placeholder="Search: null, join, count&hellip;" aria-label="Search the guide">
   </header>
 
   <!-- ==========================================================================
@@ -668,9 +707,9 @@ WHERE n1.number * n2.number &gt; 11</pre></td>
         <li><b>Start <code>FROM</code> the table that holds what you're measuring.</b> Revenue comes from quantity &times; price, so start with <code>order_items</code>. That table is your &ldquo;fact&rdquo; table.</li>
         <li><b>Each <code>ON</code> may only use tables that are already introduced.</b> SQL reads top-down, so <code>ON</code> can reference the new table plus anything above it, never anything below it.
 <pre>FROM order_items oi
-JOIN orders o     ON o.order_id = oi.order_id        -- oi is above ✔
-JOIN products pr  ON pr.product_id = oi.product_id   -- oi is above ✔
-JOIN categories c ON c.category_id = pr.category_id  -- pr is above ✔</pre>
+JOIN orders o     ON o.order_id = oi.order_id        -- oi is above &#10004;
+JOIN products pr  ON pr.product_id = oi.product_id   -- oi is above &#10004;
+JOIN categories c ON c.category_id = pr.category_id  -- pr is above &#10004;</pre>
           Classic bug: <code>o.order_id = pr.order_id</code>, which uses <code>pr</code> before it exists.</li>
         <li><b>Follow the foreign keys like a path.</b> Ask &ldquo;which column links the new table to something I already have?&rdquo; If nothing links yet, join the bridge table first. Categories can only be reached through products, so products must come before categories.</li>
         <li><b>Write <code>ON</code> as <code>new.key = existing.key</code>.</b> Put the new table on the left of <code>=</code> every time. Then you can see at a glance that the right side points to a table above. (The order inside <code>ON</code> doesn't change the result; it's only a readability habit.)</li>
@@ -902,4 +941,72 @@ SELECT * FROM ranked</pre></td>
     });
     h2.appendChild(btn);
   });
+</script>
+
+<!-- ============================================================================
+     SCRIPT - embedded mode (sql_field_guide.html?embed=1, used by SQL Gym's side panel):
+       1. puts class "embed" on <html> so the compact CSS above applies
+       2. sections start collapsed; which ones are open is remembered
+       3. clicking a chip in the top bar opens that section
+       4. the search box hides cards / notes / sections that don't contain the text
+     ============================================================================ -->
+<script>
+  (function () {
+    if (!/[?&]embed=1\b/.test(location.search)) return;
+    document.documentElement.classList.add('embed');
+
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('section, .callout'));
+    var KEY = 'sqlguide.open';
+    var open;
+    try { open = JSON.parse(localStorage.getItem(KEY) || '[]'); } catch (e) { open = []; }
+
+    function setOpen(box, isOpen) {
+      box.classList.toggle('collapsed', !isOpen);
+      var btn = box.querySelector('h2 .toggle');
+      if (btn) { btn.textContent = isOpen ? 'hide' : 'show'; btn.setAttribute('aria-expanded', String(isOpen)); }
+    }
+    function save() {
+      var ids = boxes.filter(function (b) { return !b.classList.contains('collapsed'); }).map(function (b) { return b.id; });
+      try { localStorage.setItem(KEY, JSON.stringify(ids)); } catch (e) {}
+    }
+    boxes.forEach(function (b) { setOpen(b, open.indexOf(b.id) >= 0); });
+    // the hide/show buttons were wired by the script above; save after each click
+    document.querySelectorAll('h2 .toggle').forEach(function (btn) { btn.addEventListener('click', save); });
+
+    // chip click: open the section and scroll it to just below the pinned header (its height depends on the panel width)
+    var head = document.querySelector('header.masthead');
+    document.querySelectorAll('nav.toc a').forEach(function (a) {
+      a.addEventListener('click', function (e) {
+        var box = document.getElementById(a.getAttribute('href').slice(1));
+        if (!box) return;
+        e.preventDefault();
+        setOpen(box, true); save();
+        window.scrollTo(0, box.getBoundingClientRect().top + window.scrollY - head.offsetHeight - 8);
+      });
+    });
+
+    // search: match against each card (table row), note bullet and callout; sections are opened while searching
+    var input = document.getElementById('search');
+    var before = null;   // which sections were open before the search started
+    input.addEventListener('input', function () {
+      var q = input.value.trim().toLowerCase();
+      if (q && !before) before = boxes.filter(function (b) { return !b.classList.contains('collapsed'); });
+      boxes.forEach(function (box) {
+        var items = box.querySelectorAll('tbody tr, .note li, .callout li');
+        var title = box.querySelector('h2').textContent.toLowerCase().indexOf(q) >= 0;   // section name matches -> show it whole
+        var any = false;
+        items.forEach(function (it) {
+          var hit = !q || title || it.textContent.toLowerCase().indexOf(q) >= 0;
+          it.classList.toggle('nomatch', !hit);
+          any = any || hit;
+        });
+        box.querySelectorAll('.note').forEach(function (n) {
+          n.classList.toggle('nomatch', !!q && !n.querySelector('li:not(.nomatch)'));
+        });
+        box.classList.toggle('nomatch', !!q && !any && !title);
+        if (q) setOpen(box, true);
+      });
+      if (!q && before) { boxes.forEach(function (b) { setOpen(b, before.indexOf(b) >= 0); }); before = null; }
+    });
+  })();
 </script>

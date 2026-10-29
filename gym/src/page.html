@@ -712,7 +712,7 @@ async function setListMode(m) {
   $('guide').hidden = m !== 'guide';
   $('lmode').querySelectorAll('[data-m]').forEach((b) => b.setAttribute('aria-pressed', b.dataset.m === m));
   store.set('listMode', m);
-  if (m === 'guide' && !$('guide').src) $('guide').src = await guideUrl();
+  if (m === 'guide' && !$('guide').src) $('guide').src = (await guideUrl()) + '?embed=1';
 }
 $('lmode').onclick = (e) => { const b = e.target.closest('[data-m]'); if (b) setListMode(b.dataset.m); };
 setListMode(store.get('listMode', 'questions'));
