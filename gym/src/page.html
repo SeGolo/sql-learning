@@ -120,7 +120,7 @@ pre.sol { margin: 0; padding: 10px 12px; background: var(--sunk); border: 1px so
 .helpers { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 8px; }
 
 .editor { border: 1px solid var(--line); border-radius: var(--r); background: var(--panel); overflow: hidden; }
-.editor .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); background: var(--sunk); }
+.editor .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid var(--line); background: var(--panel); }
 .editor .bar .lbl { font: 500 12px var(--f-mono); color: var(--muted); margin-right: auto; padding-left: 4px; }
 textarea#sql { display: block; width: 100%; min-height: 200px; resize: vertical; border: 0; padding: 12px 14px; background: var(--panel);
   font: 14.5px/1.6 var(--f-mono); tab-size: 2; outline: none; }
@@ -246,7 +246,7 @@ textarea.ans { display: block; width: 100%; min-height: 160px; resize: vertical;
 /* Editor theme, driven by the page tokens */
 .editor .CodeMirror { height: auto; font: 14.5px/1.6 var(--f-mono); background: var(--panel); color: var(--ink); }
 .editor .CodeMirror-scroll { min-height: 220px; }
-.editor .CodeMirror-gutters { background: var(--sunk); border-right: 1px solid var(--line); }
+.editor .CodeMirror-gutters { background: var(--panel); border-right: 1px solid var(--line); }
 .editor .CodeMirror-linenumber { color: var(--null); padding: 0 10px 0 8px; }
 .editor .CodeMirror-cursor { border-left: 2px solid var(--ink); }
 .editor .CodeMirror-selected, .editor .CodeMirror-focused .CodeMirror-selected, .editor .CodeMirror-line::selection, .editor .CodeMirror-line > span::selection, .editor .CodeMirror-line > span > span::selection { background: var(--accent-soft); }
