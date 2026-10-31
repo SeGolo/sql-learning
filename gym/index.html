@@ -81,6 +81,11 @@ body:has(.shell.noside) .lead { width: auto; margin-right: 0; }
 .schema .lesson table { font-size: 12.5px; color: var(--ink); }
 .schema .lesson td:first-child { width: auto; }
 .schema .lesson h4 { margin: 0 0 8px; font: 600 14px var(--f-body); }
+/* Scenario exam: one button per option; after a click the right one turns green, a wrong pick red */
+.mcopts { display: grid; gap: 8px; max-width: 72ch; }
+.mcopts .btn { text-align: left; padding: 10px 14px; font-size: 15px; }
+.mcopts .btn.right { border-color: var(--ok); background: var(--ok-soft); }
+.mcopts .btn.wrong { border-color: var(--bad); background: var(--bad-soft); }
 /* Stats tab: solved / total per topic and database, thin grid like the schema panel */
 .side.stats .filters, .side.stats .qlist { display: none; }
 #stats { flex: 1; overflow: auto; margin-top: 12px; border-top: 1px solid var(--line); padding: 12px 16px 24px max(16px, env(safe-area-inset-left, 0px)); }
@@ -586,8 +591,11 @@ function wireRate(i) {
 // ---------- Czech practice ----------
 // Lesson of a topic in the right panel, so the rule stays in view while answering.
 // A reading card can bring its own side text (q.side), e.g. the English version of a Czech text.
+// Scenario questions show the module's first reading card (the framework table).
 function renderCzRule(q) {
-  const g = q.g, lesson = q.side ? q : state.db.questions.find((x) => x.g === g && x.k === 'lesson');
+  const qs = state.db.questions;
+  if (q.k === 'mc') { const r = qs.find((x) => x.k === 'lesson'); $('dbody').innerHTML = r ? `<div class="lesson"><h4>${esc(r.g)}</h4>${r.p}</div>` : ''; return; }
+  const g = q.g, lesson = q.side ? q : qs.find((x) => x.g === g && x.k === 'lesson');
   $('dbody').innerHTML = lesson ? `<div class="lesson"><h4>${esc(g)}</h4>${lesson.side || lesson.p}</div>` : '';
 }
 const navHtml = (i, n) => `<div class="nav">
@@ -653,6 +661,29 @@ function openCz(i, q, n, draft) {
   inp.focus();
 }
 
+// Scenario exam: pick one option; the answer and its explanation show at once.
+function openMc(i, q, n) {
+  renderCzRule(q);
+  const cz = state.db.kind === 'cz';
+  $('work').innerHTML = `
+    <p class="prompt"><b>${i + 1}.</b> ${q.p}</p>
+    <div class="mcopts" id="mcopts">${q.a.map((o, k) => `<button class="btn" type="button" data-k="${k}">${esc(o)}</button>`).join('')}</div>
+    <div class="results" id="results"></div>
+    ${navHtml(i, n)}`;
+  $('mcopts').onclick = (e) => {
+    const b = e.target.closest('[data-k]'); if (!b) return;
+    const k = +b.dataset.k, ok = k === q.c;
+    $('mcopts').querySelectorAll('[data-k]').forEach((x) => x.classList.remove('right', 'wrong'));
+    $('mcopts').querySelector(`[data-k="${q.c}"]`).classList.add('right');
+    if (!ok) b.classList.add('wrong');
+    if (ok) { solved.add(key(i)); store.set('solved', [...solved]); renderList(); }
+    $('results').innerHTML = ok
+      ? `<div class="verdict ok"><span class="tag">${cz ? 'Správně' : 'Correct'}</span><p>${q.w}</p></div>`
+      : `<div class="verdict bad"><span class="tag">${cz ? 'Ne' : 'Not quite'}</span><p>${cz ? 'Správně' : 'Answer'}: <b>${esc(q.a[q.c])}</b>. ${q.w}</p></div>`;
+  };
+  wireNav(i);
+}
+
 function openTheory(i, q, n, draft) {
   $('work').innerHTML = `
     <p class="prompt"><b>${i + 1}.</b> ${esc(q.p)}</p>
@@ -683,6 +714,7 @@ function openQuestion(i) {
   if (q.k === 'theory') return openTheory(i, q, n, draft);
   if (q.k === 'lesson') return openLesson(i, q, n);
   if (q.k === 'cz') return openCz(i, q, n, draft);
+  if (q.k === 'mc') return openMc(i, q, n);
   const czTip = q.cz ? `<span class="czt" tabindex="0" aria-label="Czech translation">CZ<span class="tip">${q.cz}</span></span>` : '';
   $('work').innerHTML = `
     <p class="prompt"><b>${i + 1}.</b>${czTip} ${q.p}</p>

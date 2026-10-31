@@ -85,6 +85,4 @@ def questions():
 
 
 def cz_reading():
-    return [lesson('Čtení: Chomjak — hříchy a ctnosti', '1 · Chomjak: hříchy a ctnosti',
-                   '<p><i>Read the Czech text. The English version is in the right panel.</i></p>' + card('CZ'),
-                   '<h4>English</h4>' + card('EN'))]
+    return [lesson('Čtení: Chomjak — hříchy a ctnosti', '1 · Chomjak: hříchy a ctnosti', card('CZ'), '<h4>English</h4>' + card('EN'))]
