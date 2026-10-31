@@ -1,4 +1,4 @@
-"""Scenario exam for the Khomiak framework (mindset.py): real-life situation -> pick the matching sin or virtue.
+"""Scenario exam for the sins-and-virtues framework (mindset.py): real-life situation -> pick the matching sin or virtue.
 Entry = (domain, difficulty, answer, [3 distractors], EN scenario, EN why, CZ scenario, CZ why).
 Options are names from the framework table (translated through mindset.LANG); a custom option is written 'English|Czech'.
 English goes to the Mindset module, Czech to Čeština · čtení."""

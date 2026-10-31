@@ -21,7 +21,7 @@ write('czvocab', dict(id='czvocab', kind='cz', name='Čeština · slovíčka', t
                       schema=[], notes=[], questions=cz_vocab.questions()))
 write('czread', dict(id='czread', kind='cz', name='Čeština · čtení', tagline='Czech reading: Czech text, English in the right panel',
                      schema=[], notes=[], questions=mindset.cz_reading() + mindset_scenarios.questions('CZ')))
-write('mindset', dict(id='mindset', kind='mind', name='Mindset · Khomiak', tagline='Reading: sins and virtues (EN / UK / CZ)',
+write('mindset', dict(id='mindset', kind='mind', name='Mindset', tagline='Reading: sins and virtues (EN / UK / CZ)',
                       schema=[], notes=[], questions=mindset.questions() + mindset_scenarios.questions('EN')))
 
 p = os.path.join(OUT, 'velo.js')

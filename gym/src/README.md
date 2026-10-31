@@ -9,7 +9,7 @@ Build and verification scripts for the SQL Gym page (`../index.html`).
 - `build.py`: writes `velo.js`, `pulse.js` and `ace.js` into `site/` (expects PGlite 0.2.17 unpacked in `pgl/`). `python build.py pulse` builds one database only.
 - `page.html`: the page body as published to claude.ai; `../index.html` is the same wrapped in `<html>`/`<head>`.
 - `cz_grammar.py`, `cz_vocab.py`: Czech practice (A1 grammar lessons + drills, work vocabulary). `velo_cz.py`: Czech text of the Velo tasks (CZ hover icon).
-- `mindset.py`: Mindset reading (Khomiak, sins and virtues, EN / UK / CZ) and the Czech reading card (Czech text, English in the right panel).
+- `mindset.py`: Mindset reading (sins and virtues, EN / UK / CZ) and the Czech reading card (Czech text, English in the right panel).
   `mindset_scenarios.py`: 50 real-life scenarios as a multiple-choice exam (English in Mindset, Czech in Čeština · čtení).
   `python build_cz.py` writes `../czgram.js`, `../czvocab.js`, `../czread.js`, `../mindset.js` and adds the Czech text to `../velo.js` (a full `build.py` run adds it too).
 

@@ -1,9 +1,7 @@
-"""Mindset reading: Oleg Khomiak's framework of sins and virtues (five episodes), in English, Ukrainian and Czech.
+"""Mindset reading: a framework of sins and virtues, in English, Ukrainian and Czech.
 Reading cards only (k='lesson'): no drills. side = text shown in the right panel next to the card.
 Also feeds the Czech reading module (czread): Czech text in the card, English in the right panel.
 Row = (domain, sin, sin explanation, virtue, virtue explanation)."""
-
-SRC = 'Oleg Khomiak (Олег Хомяк), five episodes.'
 
 LANG = {
 'EN': dict(name='English', head=('Domain', 'Sin — shadow side', 'Virtue — pivot point'),
@@ -71,7 +69,7 @@ def card(lang):
     rows = ''.join(f'<tr><td>{d}</td><td><b>{s}</b> — {se}</td><td><b>{v}</b> — {ve}</td></tr>' for d, s, se, v, ve in L['rows'])
     return (f'<p><b>{L["core"]}</b></p>'
             f'<table><thead><tr>{"".join(f"<th>{h}</th>" for h in L["head"])}</tr></thead><tbody>{rows}</tbody></table>'
-            f'<p><small>{SRC}</small></p>')
+            )
 
 
 def lesson(t, g, p, side):
@@ -79,10 +77,10 @@ def lesson(t, g, p, side):
 
 
 def questions():
-    g = 'Khomiak · sins and virtues'
+    g = 'Sins and virtues'
     side = ''.join(f'<p><b>{LANG[x]["name"]}:</b> {LANG[x]["core"]}</p>' for x in ('EN', 'UK', 'CZ'))
-    return [lesson(f'Khomiak: sins and virtues ({LANG[x]["name"]})', g, card(x), side) for x in ('EN', 'UK', 'CZ')]
+    return [lesson(f'Sins and virtues ({LANG[x]["name"]})', g, card(x), side) for x in ('EN', 'UK', 'CZ')]
 
 
 def cz_reading():
-    return [lesson('Čtení: Chomjak — hříchy a ctnosti', '1 · Chomjak: hříchy a ctnosti', card('CZ'), '<h4>English</h4>' + card('EN'))]
+    return [lesson('Čtení: Hříchy a ctnosti', '1 · Hříchy a ctnosti', card('CZ'), '<h4>English</h4>' + card('EN'))]
