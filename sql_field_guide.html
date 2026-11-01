@@ -417,6 +417,36 @@
   html.embed footer{display:none}
   /* search: hide what doesn't match (the script also opens collapsed sections while a search is typed) */
   .nomatch{display:none!important}
+  /* plain one-column blocks (section 04): text like a document, tables like the schema panel */
+  .pblock{padding:0}
+  table.plain.sample{width:100%;margin:0}
+  .pblock td > :last-child{margin-bottom:0!important}
+  .pblock p.plbl{margin:0 0 .25rem}
+  .pblock table.plain{margin:0 0 .75rem}
+  .pblock p.pmiss{margin:0}
+  table.onecol{width:100%;min-width:0;border-collapse:collapse;margin:0 0 1rem}
+  table.onecol > tbody > tr{display:table-row!important}
+  table.onecol > tbody > tr > td{display:table-cell!important;border:1px solid var(--border)!important;padding:.6rem .7rem!important;max-width:none}
+  table.onecol > tbody > tr:hover > td{background:none!important}
+  table.onecol > tbody > tr:first-child > td{border-top:0!important;border-left:0!important;border-right:0!important;padding-left:0!important}
+  table.plain.out th,table.plain.out td{border:0!important;padding:0 1.2rem 0 0!important}
+  .pblock h3{margin:0 0 .2rem;font:500 13px var(--mono);color:var(--ink)}
+  .pblock p{margin:0 0 .75rem;font-size:13px;color:var(--muted)}
+  .pblock pre{margin:0 0 .75rem;font:13px/1.5 var(--mono);color:var(--ink);white-space:pre-wrap}
+  p.plbl{margin:0 0 .25rem;font-size:13px;font-weight:400;color:var(--ink)}
+  table.plain{width:auto;min-width:0;border-collapse:collapse;margin:0 0 .5rem;font:12.5px/1.4 var(--mono);color:var(--muted)}
+  table.plain caption{text-align:left;font-weight:400;color:var(--ink);padding-bottom:2px}
+  .pblock ul{margin:0 0 .75rem;padding-left:1.1rem;font-size:13px;color:var(--muted)}
+  .pblock li{margin:.1rem 0}
+  table.plain thead{display:table-header-group!important}
+  table.plain tr{display:table-row!important}
+  table.plain th,table.plain td{display:table-cell!important;border:1px solid var(--border)!important;padding:2px 8px!important;
+    text-align:left;font:12.5px/1.4 var(--mono)!important;background:none!important;position:static;letter-spacing:0;text-transform:none}
+  table.plain th{color:var(--ink);font-weight:400!important}
+  table.plain td.nul{font-style:italic}
+  .pmiss{font-size:13px;color:var(--muted)}
+  .pmiss .mw{color:#9b2c2c}
+  .pblock code{font-family:var(--mono);font-size:.92em}
 </style>
 
 <!-- ============================ VISIBLE CONTENT ============================ -->
@@ -698,47 +728,62 @@ AND salary &gt; 80000</pre></td>
   <section id="agg">
     <h2><span class="num">04</span> Aggregate functions</h2>
     <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
-    <div class="tablecard"><div class="scroll"><table>
-      <thead><tr><th>Function</th><th>Gives you&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
-      <tbody>
-        <tr>
-          <td class="term">COUNT(*)</td>
-          <td class="use">Number of rows</td>
-          <td class="code"><pre>SELECT COUNT(*) FROM orders</pre></td>
-          <td class="miss">Counts <b>rows</b>, not values. After a LEFT JOIN a customer with no orders still has 1 row (filled with NULLs) &rarr; <code>COUNT(*)</code> = 1, not 0. Count a right-table column: <code>COUNT(o.order_id)</code></td>
-        </tr>
-        <tr>
-          <td class="term">COUNT(col)</td>
-          <td class="use">Non-NULL values in a column</td>
-          <td class="code"><pre>COUNT(phone_number)</pre></td>
-          <td class="miss">Ignores NULLs &mdash; different number from <code>COUNT(*)</code></td>
-        </tr>
-        <tr>
-          <td class="term">COUNT(DISTINCT col)</td>
-          <td class="use">How many different values</td>
-          <td class="code"><pre>COUNT(DISTINCT unit_id)</pre></td>
-          <td class="miss">Forgetting <code>DISTINCT</code> counts repeats</td>
-        </tr>
-        <tr>
-          <td class="term">SUM(col)</td>
-          <td class="use">Total</td>
-          <td class="code"><pre>SUM(total_order_cost)</pre></td>
-          <td class="miss">On text-typed columns &rarr; error; <code>CAST</code> first</td>
-        </tr>
-        <tr>
-          <td class="term">AVG(col)</td>
-          <td class="use">Average</td>
-          <td class="code"><pre>AVG(salary)</pre></td>
-          <td class="miss">Skips NULLs &mdash; not the same as treating them as 0</td>
-        </tr>
-        <tr>
-          <td class="term">MIN / MAX(col)</td>
-          <td class="use">Smallest / largest</td>
-          <td class="code"><pre>MAX(salary)</pre></td>
-          <td class="miss">On text columns, "max" is alphabetical, not numeric</td>
-        </tr>
-      </tbody>
-    </table></div></div>
+    <p class="plbl">Table: staff</p>
+    <table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>phone</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td><td>777 111</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td><td>777 333</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td class="nul">NULL</td><td>777 444</td></tr><tr><td>5</td><td>Lucie</td><td>Sales</td><td>70000</td><td class="nul">NULL</td></tr></tbody></table>
+    <p class="plbl" style="margin:.75rem 0 .25rem">Functions descriptions:</p>
+    
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>COUNT(*)</h3><p>Number of rows</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>How many orders, customers or sign-ups &mdash; in total, or per day with GROUP BY</li><li>Groups above a size: customers with 3+ orders &rarr; <code>HAVING COUNT(*) &gt;= 3</code></li><li>Find duplicates: <code>GROUP BY email HAVING COUNT(*) &gt; 1</code></li></ul></td></tr>
+      <tr><td><pre>SELECT COUNT(*) FROM staff</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>count</th></tr></thead><tbody><tr><td>5</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: Counts rows, not values. After a LEFT JOIN a customer with no orders still has 1 row (filled with NULLs) &rarr; <code>COUNT(*)</code> = 1, not 0. Count a right-table column: <code>COUNT(o.order_id)</code></p></td></tr>
+    </tbody></table>
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>COUNT(col)</h3><p>Non-NULL values in a column</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>How many rows have a value filled in: customers with a phone</li><li>After a LEFT JOIN: <code>COUNT(o.order_id)</code> gives 0 for customers with no orders</li><li>Missing values: <code>COUNT(*) - COUNT(phone)</code></li></ul></td></tr>
+      <tr><td><pre>SELECT COUNT(phone) FROM staff</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>count</th></tr></thead><tbody><tr><td>3</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: Ignores NULLs &mdash; Petr and Lucie have no phone, so 3, not 5</p></td></tr>
+    </tbody></table>
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>COUNT(DISTINCT col)</h3><p>How many different values</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>Unique customers who ordered (one customer, many orders)</li><li>Active users per day or month</li><li>How many different products each customer bought</li></ul></td></tr>
+      <tr><td><pre>SELECT COUNT(DISTINCT dept) FROM staff</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>count</th></tr></thead><tbody><tr><td>3</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: Forgetting <code>DISTINCT</code> counts repeats: <code>COUNT(dept)</code> = 5</p></td></tr>
+    </tbody></table>
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>SUM(col)</h3><p>Total</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>Revenue: <code>SUM(quantity * price)</code></li><li>Total per customer or month (with GROUP BY)</li><li>Count a condition: <code>SUM(CASE WHEN &hellip; THEN 1 ELSE 0 END)</code> (section 10)</li></ul></td></tr>
+      <tr><td><pre>SELECT SUM(salary) FROM staff</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>sum</th></tr></thead><tbody><tr><td>260000</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: On text-typed columns &rarr; error; <code>CAST</code> first</p></td></tr>
+    </tbody></table>
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>AVG(col)</h3><p>Average</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>Average order value, average salary per department</li><li>Share in %: <code>AVG(CASE WHEN &hellip; THEN 1.0 ELSE 0 END)</code></li><li>Above average: <code>WHERE salary &gt; (SELECT AVG(salary) FROM staff)</code></li></ul></td></tr>
+      <tr><td><pre>SELECT AVG(salary) FROM staff</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>avg</th></tr></thead><tbody><tr><td>65000</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: Skips NULLs: 260000 / 4 = 65000. Treating Jan's NULL as 0 would give 260000 / 5 = 52000</p></td></tr>
+    </tbody></table>
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>MIN / MAX(col)</h3><p>Smallest / largest</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>First / last date: <code>MIN(order_date)</code> = first order, <code>MAX(login_date)</code> = last activity</li><li>Top earner with ties: <code>WHERE salary = (SELECT MAX(salary) FROM staff)</code></li><li>Range: <code>MAX(price) - MIN(price)</code></li></ul></td></tr>
+      <tr><td><pre>SELECT MIN(salary), MAX(salary), MAX(name)
+FROM staff</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>min</th><th>max</th><th>max</th></tr></thead><tbody><tr><td>50000</td><td>80000</td><td>Petr</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: On text columns, "max" is alphabetical, not numeric &mdash; Petr comes last A&ndash;Z</p></td></tr>
+    </tbody></table>
+    <table class="onecol pblock"><tbody>
+      <tr><td><h3>GROUP BY</h3><p>The same functions, once per group</p></td></tr>
+      <tr><td><p class="plbl">When to use:</p><ul><li>Any question with "per": per department, per customer, per month (<code>DATE_TRUNC</code>)</li><li>Filter the groups afterwards with <code>HAVING</code></li><li>Several aggregates side by side in one row per group</li></ul></td></tr>
+      <tr><td><pre>SELECT dept, COUNT(*), AVG(salary)
+FROM staff
+GROUP BY dept</pre></td></tr>
+      <tr><td><p class="plbl">Output:</p><table class="plain out"><thead><tr><th>dept</th><th>count</th><th>avg</th></tr></thead><tbody><tr><td>HR</td><td>2</td><td>55000</td></tr><tr><td>IT</td><td>2</td><td>80000</td></tr><tr><td>Sales</td><td>1</td><td>70000</td></tr></tbody></table></td></tr>
+      <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: IT's average is 80000, not 40000 &mdash; Jan's NULL is skipped, not counted as 0</p></td></tr>
+    </tbody></table>
   </section>
 
   <!-- 05 - Joins: glue tables together side by side (add columns). -->
@@ -1329,7 +1374,8 @@ SELECT * FROM ranked</pre></td>
       var q = input.value.trim().toLowerCase();
       if (q && !before) before = boxes.filter(function (b) { return !b.classList.contains('collapsed'); });
       boxes.forEach(function (box) {
-        var items = box.querySelectorAll('tbody tr, .note li, .callout li');
+        // a one-column function table (section 04) is one item; rows inside it and its small output/sample tables are not
+        var items = box.querySelectorAll('table:not(.onecol):not(.plain) > tbody > tr, table.onecol, .note li, .callout li');
         var title = box.querySelector('h2').textContent.toLowerCase().indexOf(q) >= 0;   // section name matches -> show it whole
         var any = false;
         items.forEach(function (it) {
