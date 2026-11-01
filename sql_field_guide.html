@@ -698,70 +698,44 @@ AND salary &gt; 80000</pre></td>
   <section id="agg">
     <h2><span class="num">04</span> Aggregate functions</h2>
     <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
-    <!-- NOTE: sample table; every example below runs on it and shows its result -->
-    <div class="note" style="margin-top:.4rem">
-      <b>Sample table <code>staff</code></b> &mdash; every example below runs on these 5 rows; <code>--</code> shows the result.
-<pre>id | name  | dept  | salary | phone
----+-------+-------+--------+---------
- 1 | Anna  | HR    |  50000 | 777 111
- 2 | Petr  | HR    |  60000 | NULL
- 3 | Eva   | IT    |  80000 | 777 333
- 4 | Jan   | IT    |   NULL | 777 444
- 5 | Lucie | Sales |  70000 | NULL</pre>
-    </div>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Function</th><th>Gives you&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
       <tbody>
         <tr>
           <td class="term">COUNT(*)</td>
           <td class="use">Number of rows</td>
-          <td class="code"><pre>SELECT COUNT(*) FROM staff  -- 5</pre></td>
+          <td class="code"><pre>SELECT COUNT(*) FROM orders</pre></td>
           <td class="miss">Counts <b>rows</b>, not values. After a LEFT JOIN a customer with no orders still has 1 row (filled with NULLs) &rarr; <code>COUNT(*)</code> = 1, not 0. Count a right-table column: <code>COUNT(o.order_id)</code></td>
         </tr>
         <tr>
           <td class="term">COUNT(col)</td>
           <td class="use">Non-NULL values in a column</td>
-          <td class="code"><pre>COUNT(phone)  -- 3 (2 NULLs skipped)</pre></td>
+          <td class="code"><pre>COUNT(phone_number)</pre></td>
           <td class="miss">Ignores NULLs &mdash; different number from <code>COUNT(*)</code></td>
         </tr>
         <tr>
           <td class="term">COUNT(DISTINCT col)</td>
           <td class="use">How many different values</td>
-          <td class="code"><pre>COUNT(DISTINCT dept)  -- 3
-COUNT(dept)           -- 5</pre></td>
+          <td class="code"><pre>COUNT(DISTINCT unit_id)</pre></td>
           <td class="miss">Forgetting <code>DISTINCT</code> counts repeats</td>
         </tr>
         <tr>
           <td class="term">SUM(col)</td>
           <td class="use">Total</td>
-          <td class="code"><pre>SUM(salary)  -- 260000</pre></td>
+          <td class="code"><pre>SUM(total_order_cost)</pre></td>
           <td class="miss">On text-typed columns &rarr; error; <code>CAST</code> first</td>
         </tr>
         <tr>
           <td class="term">AVG(col)</td>
           <td class="use">Average</td>
-          <td class="code"><pre>AVG(salary)               -- 65000 (260000 / 4)
-AVG(COALESCE(salary, 0))  -- 52000 (260000 / 5)</pre></td>
+          <td class="code"><pre>AVG(salary)</pre></td>
           <td class="miss">Skips NULLs &mdash; not the same as treating them as 0</td>
         </tr>
         <tr>
           <td class="term">MIN / MAX(col)</td>
           <td class="use">Smallest / largest</td>
-          <td class="code"><pre>MIN(salary)  -- 50000
-MAX(salary)  -- 80000
-MAX(name)    -- 'Petr' (A..Z)</pre></td>
+          <td class="code"><pre>MAX(salary)</pre></td>
           <td class="miss">On text columns, "max" is alphabetical, not numeric</td>
-        </tr>
-        <tr>
-          <td class="term">+ GROUP BY</td>
-          <td class="use">The same functions, once <b>per group</b></td>
-          <td class="code"><pre>SELECT dept, COUNT(*), AVG(salary)
-FROM staff
-GROUP BY dept
--- HR    | 2 | 55000
--- IT    | 2 | 80000  (Jan's NULL skipped)
--- Sales | 1 | 70000</pre></td>
-          <td class="miss">IT's average is 80000, not 40000 &mdash; NULL is skipped, not counted as 0</td>
         </tr>
       </tbody>
     </table></div></div>
