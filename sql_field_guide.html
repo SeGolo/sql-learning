@@ -426,7 +426,7 @@
   <header class="masthead">
     <p class="eyebrow">Reference &middot; built for Serg</p>
     <h1>SQL Field Guide</h1>
-    <p class="lede">Every clause and function you've met, four ways: what it is, what it's <em>for</em>, a real example, and the mistake that bites. Examples use the tables from your StrataScratch practice &mdash; <code>employees</code>, <code>orders</code>, <code>customers</code>.</p>
+    <p class="lede">Every clause and function you've met, four ways: what it is, what it's <em>for</em>, a real example, and the mistake that bites. Examples use tables from your practice (StrataScratch and SQL Gym) &mdash; mostly <code>employees</code>, <code>orders</code>, <code>customers</code>.</p>
 
     <!-- TABLE OF CONTENTS: each <a href="#id"> scrolls to the element
          further down that has the matching id="..." attribute. -->
@@ -487,11 +487,13 @@
       <span>GROUP BY</span><span class="arw">&rarr;</span>
       <span>HAVING</span><span class="arw">&rarr;</span>
       <span>SELECT</span><span class="arw">&rarr;</span>
-      <span>ORDER BY</span>
+      <span>DISTINCT</span><span class="arw">&rarr;</span>
+      <span>ORDER BY</span><span class="arw">&rarr;</span>
+      <span>LIMIT</span>
     </div>
     <ul>
       <li><code>WHERE</code> can't use <code>COUNT</code>/<code>SUM</code> &mdash; aggregates don't exist until after <code>GROUP BY</code>, so filter groups with <code>HAVING</code>.</li>
-      <li>Aliases work in <code>ORDER BY</code> but not <code>HAVING</code>/<code>WHERE</code> &mdash; the alias is born in <code>SELECT</code>, which runs late.</li>
+      <li>Aliases work in <code>ORDER BY</code> but not in <code>WHERE</code> or <code>HAVING</code> &mdash; the alias is born in <code>SELECT</code>, which runs late. Exception: PostgreSQL and MySQL also let you write the alias in <code>GROUP BY</code> (a shortcut they add); Oracle does not.</li>
       <li><code>SELECT</code> &mdash; where you build aliases and computed columns &mdash; happens almost <b>last</b>.</li>
     </ul>
   </div>
@@ -508,7 +510,7 @@
           <td class="use">Whole numbers: ids, counts, quantities</td>
           <td class="code"><pre>SELECT 7 / 2      -- 3
 SELECT 7 / 2.0    -- 3.5</pre></td>
-          <td class="miss">Integer &divide; integer <b>drops the decimals</b>. Make one side decimal (<code>2.0</code>) or <code>CAST</code> it</td>
+          <td class="miss">Integer / integer <b>drops the decimals</b>. Make one side decimal (<code>2.0</code>) or <code>CAST</code> it</td>
         </tr>
         <tr>
           <td class="term">NUMERIC(p, s)</td>
@@ -534,7 +536,7 @@ SELECT 7 / 2.0    -- 3.5</pre></td>
           <td class="term">CHAR(n)</td>
           <td class="use">Fixed-length text, padded with spaces: codes</td>
           <td class="code"><pre>country CHAR(2)  -- 'CZ'</pre></td>
-          <td class="miss">Numbers stored as text sort and compare as text: <code>'9' &gt; '40'</code></td>
+          <td class="miss">Pads with spaces up to n: <code>CHAR(5)</code> stores <code>'CZ'</code> as <code>'CZ&nbsp;&nbsp;&nbsp;'</code>. PostgreSQL hides the spaces, Oracle keeps them in comparisons &mdash; use VARCHAR/TEXT unless the length is truly fixed</td>
         </tr>
         <tr>
           <td class="term">BOOLEAN</td>
@@ -561,7 +563,7 @@ delivered_date - shipped_date  -- days</pre></td>
           <td class="term">INTERVAL</td>
           <td class="use">A length of time</td>
           <td class="code"><pre>order_date + INTERVAL '1 month'</pre></td>
-          <td class="miss">Not a number: <code>EXTRACT(EPOCH FROM interval) / 86400</code> turns it into days</td>
+          <td class="miss">Not a number: <code>EXTRACT(EPOCH FROM interval) / 86400</code> turns it into days (epoch = seconds; 86400 seconds = 1 day)</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -602,7 +604,7 @@ delivered_date - shipped_date  -- days</pre></td>
           <td class="term">HAVING</td>
           <td class="use">Filter <b>groups</b> by an aggregate</td>
           <td class="code"><pre>HAVING COUNT(*) &gt;= 2</pre></td>
-          <td class="miss">Repeat the expression &mdash; <b>alias not usable</b> in HAVING</td>
+          <td class="miss">Repeat the expression &mdash; <b>alias not usable</b> in HAVING (PostgreSQL, Oracle)</td>
         </tr>
         <tr>
           <td class="term">ORDER BY</td>
@@ -615,7 +617,20 @@ delivered_date - shipped_date  -- days</pre></td>
           <td class="use">Keep only the first N rows</td>
           <td class="code"><pre>ORDER BY salary DESC
 LIMIT 10</pre></td>
-          <td class="miss"><code>LIMIT</code> without <code>ORDER BY</code> &rarr; <b>arbitrary</b> rows</td>
+          <td class="miss"><code>LIMIT</code> without <code>ORDER BY</code> &rarr; <b>arbitrary</b> rows (you get any rows, not the top ones)</td>
+        </tr>
+        <tr>
+          <td class="term">Ties + LIMIT</td>
+          <td class="use">"Highest / top" when several rows can share the top value</td>
+          <td class="code"><pre>WHERE salary = (
+  SELECT MAX(salary) FROM employees)</pre></td>
+          <td class="miss"><code>ORDER BY salary DESC LIMIT 1</code> <b>silently drops ties</b> &mdash; compare with <code>MAX()</code> instead (or <code>RANK()</code>, section 11)</td>
+        </tr>
+        <tr>
+          <td class="term">NULLS FIRST / LAST</td>
+          <td class="use">Choose where NULLs go when sorting</td>
+          <td class="code"><pre>ORDER BY last_login DESC NULLS LAST</pre></td>
+          <td class="miss">PostgreSQL puts NULLs <b>last</b> in ASC but <b>first</b> in DESC &mdash; a DESC top 10 can be all NULLs. Not in MySQL</td>
         </tr>
         <tr>
           <td class="term">DISTINCT</td>
@@ -673,7 +688,7 @@ IS NULL</pre></td>
           <td class="use">Combine conditions</td>
           <td class="code"><pre>WHERE dept IN ('HR','Admin')
 AND salary &gt; 80000</pre></td>
-          <td class="miss"><code>AND</code> binds <b>tighter</b> than <code>OR</code> &mdash; parenthesize to be safe</td>
+          <td class="miss"><code>AND</code> binds <b>tighter</b> than <code>OR</code> (AND is checked before OR) &mdash; parenthesize to be safe</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -683,44 +698,70 @@ AND salary &gt; 80000</pre></td>
   <section id="agg">
     <h2><span class="num">04</span> Aggregate functions</h2>
     <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
+    <!-- NOTE: sample table; every example below runs on it and shows its result -->
+    <div class="note" style="margin-top:.4rem">
+      <b>Sample table <code>staff</code></b> &mdash; every example below runs on these 5 rows; <code>--</code> shows the result.
+<pre>id | name  | dept  | salary | phone
+---+-------+-------+--------+---------
+ 1 | Anna  | HR    |  50000 | 777 111
+ 2 | Petr  | HR    |  60000 | NULL
+ 3 | Eva   | IT    |  80000 | 777 333
+ 4 | Jan   | IT    |   NULL | 777 444
+ 5 | Lucie | Sales |  70000 | NULL</pre>
+    </div>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Function</th><th>Gives you&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
       <tbody>
         <tr>
           <td class="term">COUNT(*)</td>
           <td class="use">Number of rows</td>
-          <td class="code"><pre>SELECT COUNT(*) FROM orders</pre></td>
-          <td class="miss">Counts NULL rows too &mdash; after a LEFT JOIN that over-counts</td>
+          <td class="code"><pre>SELECT COUNT(*) FROM staff  -- 5</pre></td>
+          <td class="miss">Counts <b>rows</b>, not values. After a LEFT JOIN a customer with no orders still has 1 row (filled with NULLs) &rarr; <code>COUNT(*)</code> = 1, not 0. Count a right-table column: <code>COUNT(o.order_id)</code></td>
         </tr>
         <tr>
           <td class="term">COUNT(col)</td>
           <td class="use">Non-NULL values in a column</td>
-          <td class="code"><pre>COUNT(phone_number)</pre></td>
+          <td class="code"><pre>COUNT(phone)  -- 3 (2 NULLs skipped)</pre></td>
           <td class="miss">Ignores NULLs &mdash; different number from <code>COUNT(*)</code></td>
         </tr>
         <tr>
           <td class="term">COUNT(DISTINCT col)</td>
           <td class="use">How many different values</td>
-          <td class="code"><pre>COUNT(DISTINCT unit_id)</pre></td>
+          <td class="code"><pre>COUNT(DISTINCT dept)  -- 3
+COUNT(dept)           -- 5</pre></td>
           <td class="miss">Forgetting <code>DISTINCT</code> counts repeats</td>
         </tr>
         <tr>
           <td class="term">SUM(col)</td>
           <td class="use">Total</td>
-          <td class="code"><pre>SUM(total_order_cost)</pre></td>
+          <td class="code"><pre>SUM(salary)  -- 260000</pre></td>
           <td class="miss">On text-typed columns &rarr; error; <code>CAST</code> first</td>
         </tr>
         <tr>
           <td class="term">AVG(col)</td>
           <td class="use">Average</td>
-          <td class="code"><pre>AVG(salary)</pre></td>
+          <td class="code"><pre>AVG(salary)               -- 65000 (260000 / 4)
+AVG(COALESCE(salary, 0))  -- 52000 (260000 / 5)</pre></td>
           <td class="miss">Skips NULLs &mdash; not the same as treating them as 0</td>
         </tr>
         <tr>
           <td class="term">MIN / MAX(col)</td>
           <td class="use">Smallest / largest</td>
-          <td class="code"><pre>MAX(salary)</pre></td>
+          <td class="code"><pre>MIN(salary)  -- 50000
+MAX(salary)  -- 80000
+MAX(name)    -- 'Petr' (A..Z)</pre></td>
           <td class="miss">On text columns, "max" is alphabetical, not numeric</td>
+        </tr>
+        <tr>
+          <td class="term">+ GROUP BY</td>
+          <td class="use">The same functions, once <b>per group</b></td>
+          <td class="code"><pre>SELECT dept, COUNT(*), AVG(salary)
+FROM staff
+GROUP BY dept
+-- HR    | 2 | 55000
+-- IT    | 2 | 80000  (Jan's NULL skipped)
+-- Sales | 1 | 70000</pre></td>
+          <td class="miss">IT's average is 80000, not 40000 &mdash; NULL is skipped, not counted as 0</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -747,7 +788,7 @@ INNER JOIN customers c
           <td class="code"><pre>FROM customers c
 LEFT JOIN orders o
   ON c.id = o.cust_id</pre></td>
-          <td class="miss">Filtering the right table in <code>WHERE</code> turns it back into an INNER JOIN</td>
+          <td class="miss">Filtering the right table in <code>WHERE</code> turns it back into an INNER JOIN. Fix: put that condition in <code>ON</code> &mdash; <code>LEFT JOIN orders o ON c.id = o.cust_id AND o.status = 'paid'</code></td>
         </tr>
         <tr>
           <td class="term">RIGHT JOIN</td>
@@ -762,14 +803,14 @@ RIGHT JOIN orders o
           <td class="use">All rows from <b>both</b> sides</td>
           <td class="code"><pre>FULL OUTER JOIN orders o
   ON c.id = o.cust_id</pre></td>
-          <td class="miss"><b>Not in MySQL</b> &mdash; emulate with <code>LEFT ... UNION ... RIGHT</code></td>
+          <td class="miss"><b>Not in MySQL</b> &mdash; emulate (imitate) with <code>LEFT ... UNION ... RIGHT</code></td>
         </tr>
         <tr>
           <td class="term">CROSS JOIN</td>
           <td class="use">Every combination of every row</td>
           <td class="code"><pre>FROM nums a
 CROSS JOIN nums b</pre></td>
-          <td class="miss">No <code>ON</code> &mdash; produces N&times;N rows (all pairs)</td>
+          <td class="miss">No <code>ON</code> &mdash; produces N*N rows (all pairs)</td>
         </tr>
         <tr>
           <td class="term">Self-join</td>
@@ -791,8 +832,8 @@ JOIN employees e2
   a.first_name AS employee1,
   b.first_name AS employee2,
   a.department
-FROM employee a
-JOIN employee b
+FROM employees a
+JOIN employees b
   ON a.department = b.department  -- same department
  AND a.id &lt; b.id                  -- each pair once, no self-pairs</pre></td>
           <td class="miss"><code>&lt;&gt;</code> lists every pair <b>twice</b> (Anna&ndash;Petr and Petr&ndash;Anna); with no id condition everyone is also paired with themselves</td>
@@ -824,7 +865,7 @@ WHERE n1.number * n2.number &gt; 11</pre></td>
         </tr>
         <tr>
           <td class="term">Fan-out</td>
-          <td class="use">Joining one row to <b>many</b> rows repeats it once per match</td>
+          <td class="use">Rows get multiplied: joining one row to <b>many</b> rows repeats it once per match</td>
           <td class="code"><pre>SELECT o.order_id, SUM(p.amount)
 FROM orders o
 JOIN order_items oi ON oi.order_id = o.order_id
@@ -841,7 +882,7 @@ GROUP BY o.order_id  -- wrong total</pre></td>
       <ul>
         <li><b>Second copy is shown in the output</b> (a pair, e.g. <code>num1, num2</code> &mdash; Self-join 4) &rarr; use <code>&lt;</code> or <code>&gt;</code>. <code>(2,7)</code> and <code>(7,2)</code> are the same pair, so <code>&lt;</code> keeps one ordering and also removes self-pairs.</li>
         <li><b>Second copy is only a test</b> ("does another row exist where&hellip;?" &mdash; only the first copy is output &mdash; Self-join 3) &rarr; use <code>&lt;&gt;</code>. You need "any other row", and every row must be able to play the first-copy part, so <code>&lt;</code> would silently drop some.</li>
-        <li>Set-theory view: <code>&lt;</code> yields each <b>unordered</b> pair <code>{a, b}</code> once; <code>&lt;&gt;</code> yields every <b>ordered</b> pair <code>(a, b)</code> with <code>a &ne; b</code> &mdash; both directions.</li>
+        <li>Set-theory view: <code>&lt;</code> gives each pair <b>once</b>; <code>&lt;&gt;</code> gives it <b>twice</b>, A&ndash;B and B&ndash;A. (Formally: <code>&lt;</code> yields each unordered pair <code>{a, b}</code> once; <code>&lt;&gt;</code> yields every ordered pair <code>(a, b)</code> with <code>a &lt;&gt; b</code>.)</li>
       </ul>
     </div>
 
@@ -849,14 +890,14 @@ GROUP BY o.order_id  -- wrong total</pre></td>
     <div class="note">
       <b>Ordering JOIN chains</b>
       <ul>
-        <li><b>Start <code>FROM</code> the table that holds what you're measuring.</b> Revenue comes from quantity &times; price, so start with <code>order_items</code>. That table is your &ldquo;fact&rdquo; table.</li>
+        <li><b>Start <code>FROM</code> the table that holds what you're measuring.</b> Revenue comes from quantity * price, so start with <code>order_items</code>. That table is your &ldquo;fact&rdquo; table (the main table you measure).</li>
         <li><b>Each <code>ON</code> may only use tables that are already introduced.</b> SQL reads top-down, so <code>ON</code> can reference the new table plus anything above it, never anything below it.
 <pre>FROM order_items oi
 JOIN orders o     ON o.order_id = oi.order_id        -- oi is above &#10004;
 JOIN products pr  ON pr.product_id = oi.product_id   -- oi is above &#10004;
 JOIN categories c ON c.category_id = pr.category_id  -- pr is above &#10004;</pre>
           Classic bug: <code>o.order_id = pr.order_id</code>, which uses <code>pr</code> before it exists.</li>
-        <li><b>Follow the foreign keys like a path.</b> Ask &ldquo;which column links the new table to something I already have?&rdquo; If nothing links yet, join the bridge table first. Categories can only be reached through products, so products must come before categories.</li>
+        <li><b>Follow the foreign keys like a path.</b> Ask &ldquo;which column links the new table to something I already have?&rdquo; If nothing links yet, join the bridge table (the in-between table that links two others) first. Categories can only be reached through products, so products must come before categories.</li>
         <li><b>Write <code>ON</code> as <code>new.key = existing.key</code>.</b> Put the new table on the left of <code>=</code> every time. Then you can see at a glance that the right side points to a table above. (The order inside <code>ON</code> doesn't change the result; it's only a readability habit.)</li>
         <li><b>Draw the path before writing.</b> For example: <code>categories &larr; products &larr; order_items &rarr; orders</code>. Start in the middle (the fact table) and walk outward along the arrows, one JOIN per arrow.</li>
         <li><b>Use short, distinct aliases and stick to them.</b> For example <code>oi</code>, <code>o</code>, <code>p</code>, <code>cat</code>. After writing the query, check that every alias in <code>SELECT</code>, <code>WHERE</code> and <code>GROUP BY</code> appears in <code>FROM</code>/<code>JOIN</code>.</li>
@@ -897,7 +938,7 @@ JOIN categories c ON c.category_id = pr.category_id  -- pr is above &#10004;</pr
         </tr>
         <tr>
           <td class="term">Scalar subquery</td>
-          <td class="use">Compare with <b>one</b> value</td>
+          <td class="use">Compare with <b>one</b> value (scalar = a subquery that returns one single value)</td>
           <td class="code"><pre>WHERE salary &gt; (
   SELECT AVG(salary) FROM employees)</pre></td>
           <td class="miss">Must return exactly one row &mdash; more rows is an error</td>
@@ -916,6 +957,14 @@ FROM (SELECT customer_id, COUNT(*) AS n
           <td class="use">Compare when either side can be NULL</td>
           <td class="code"><pre>WHERE old_city IS DISTINCT FROM new_city</pre></td>
           <td class="miss"><code>a &lt;&gt; b</code> is NULL (row dropped) when either side is NULL</td>
+        </tr>
+        <tr>
+          <td class="term">NULL in math / text</td>
+          <td class="use">Any calculation where one value can be NULL</td>
+          <td class="code"><pre>SELECT 100 + NULL         -- NULL
+SELECT 'a' || NULL        -- NULL
+SELECT CONCAT('a', NULL)  -- 'a'</pre></td>
+          <td class="miss">One NULL makes the <b>whole result</b> NULL &mdash; wrap it: <code>COALESCE(bonus, 0)</code>, or use <code>CONCAT</code> for text</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -943,6 +992,31 @@ SELECT 'orders', COUNT(*) FROM orders</pre></td>
 UNION ALL
 SELECT dept FROM b</pre></td>
           <td class="miss">Duplicates the rows &mdash; use plain <code>UNION</code> if you need unique</td>
+        </tr>
+        <tr>
+          <td class="term">INTERSECT</td>
+          <td class="use">Keep only rows that are in <b>both</b> results</td>
+          <td class="code"><pre>SELECT cust_id FROM orders_2023
+INTERSECT
+SELECT cust_id FROM orders_2024</pre></td>
+          <td class="miss">Removes duplicates. NULLs count as equal here (unlike <code>=</code>)</td>
+        </tr>
+        <tr>
+          <td class="term">EXCEPT</td>
+          <td class="use">Keep rows from the first result that are <b>not</b> in the second</td>
+          <td class="code"><pre>SELECT cust_id FROM orders_2023
+EXCEPT
+SELECT cust_id FROM orders_2024</pre></td>
+          <td class="miss">Order matters: <code>A EXCEPT B</code> is not <code>B EXCEPT A</code>. Oracle calls it <code>MINUS</code></td>
+        </tr>
+        <tr>
+          <td class="term">ORDER BY + UNION</td>
+          <td class="use">Sort the stacked result</td>
+          <td class="code"><pre>SELECT dept FROM a
+UNION
+SELECT dept FROM b
+ORDER BY dept</pre></td>
+          <td class="miss">One <code>ORDER BY</code> at the very end sorts the <b>whole</b> result, not just the second half</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -983,7 +1057,7 @@ SELECT dept FROM b</pre></td>
         </tr>
         <tr>
           <td class="term">LOWER / UPPER</td>
-          <td class="use">Normalize case before comparing</td>
+          <td class="use">Normalize case (make the letter case the same) before comparing</td>
           <td class="code"><pre>WHERE LOWER(dept) = 'hr'</pre></td>
           <td class="miss"><code>LOWER(x) = 'HR'</code> never matches &mdash; compare to lowercase</td>
         </tr>
@@ -992,6 +1066,38 @@ SELECT dept FROM b</pre></td>
           <td class="use">Strip / swap characters</td>
           <td class="code"><pre>REPLACE(LOWER(device),' ','')</pre></td>
           <td class="miss">Only removes exact matches &mdash; case still needs <code>LOWER</code></td>
+        </tr>
+        <tr>
+          <td class="term">|| / CONCAT</td>
+          <td class="use">Glue text together</td>
+          <td class="code"><pre>first_name || ' ' || last_name
+CONCAT(first_name, ' ', last_name)</pre></td>
+          <td class="miss"><code>||</code> with a NULL gives NULL; <code>CONCAT</code> skips NULLs</td>
+        </tr>
+        <tr>
+          <td class="term">LENGTH / TRIM</td>
+          <td class="use">Count characters / remove spaces at the ends</td>
+          <td class="code"><pre>LENGTH(TRIM(name))</pre></td>
+          <td class="miss"><code>TRIM</code> removes spaces only at the <b>ends</b>, not inside &mdash; use <code>REPLACE</code> for those</td>
+        </tr>
+        <tr>
+          <td class="term">SUBSTRING / LEFT / RIGHT</td>
+          <td class="use">Cut out part of a text</td>
+          <td class="code"><pre>SUBSTRING(phone FROM 1 FOR 3)
+LEFT(phone, 3)</pre></td>
+          <td class="miss">Positions start at <b>1</b>, not 0</td>
+        </tr>
+        <tr>
+          <td class="term">SPLIT_PART</td>
+          <td class="use">Take the n-th piece of a text split by a separator</td>
+          <td class="code"><pre>SPLIT_PART(email, '@', 2)  -- domain</pre></td>
+          <td class="miss">PostgreSQL only; pieces start at 1. MySQL: <code>SUBSTRING_INDEX</code></td>
+        </tr>
+        <tr>
+          <td class="term">POSITION</td>
+          <td class="use">Where a text starts inside another text</td>
+          <td class="code"><pre>POSITION('@' IN email)</pre></td>
+          <td class="miss">Returns <b>0</b> when not found, not NULL</td>
         </tr>
         <tr>
           <td class="term">GREATEST / LEAST</td>
@@ -1039,13 +1145,13 @@ EXTRACT(DOW FROM order_date)</pre></td>
           <td class="miss"><code>DOW</code>: <b>Sunday = 0</b>, Saturday = 6. Grouping by MONTH alone merges March 2023 with March 2024</td>
         </tr>
         <tr>
-          <td class="term">+ / &minus; INTERVAL</td>
+          <td class="term">+ / - INTERVAL</td>
           <td class="use">Shift a date by a period</td>
           <td class="code"><pre>order_date + INTERVAL '1 month'</pre></td>
-          <td class="miss">Month ends clamp: 31 Jan + 1 month = <b>29 Feb</b> (2024)</td>
+          <td class="miss">Month ends clamp (jump back to the last day of the month): 31 Jan + 1 month = <b>29 Feb</b> (2024)</td>
         </tr>
         <tr>
-          <td class="term">date &minus; date</td>
+          <td class="term">date - date</td>
           <td class="use">Days between two dates</td>
           <td class="code"><pre>delivered_date - shipped_date</pre></td>
           <td class="miss">On TIMESTAMPs the result is an INTERVAL &mdash; <code>CAST</code> both to DATE for whole days</td>
@@ -1063,7 +1169,7 @@ EXTRACT(DOW FROM order_date)</pre></td>
   <!-- 10 - Counting a condition: the SUM(CASE...) / COUNT(CASE...) trick. -->
   <section id="count">
     <h2><span class="num">10</span> Counting a condition</h2>
-    <p class="intro">SQL has no "count only the matching rows" function &mdash; you fake it by turning the condition into 1s and 0s, then summing. Three spellings, same answer.</p>
+    <p class="intro">Standard SQL has no "count only the matching rows" function &mdash; you fake it by turning the condition into 1s and 0s, then summing. Several spellings, same answer (PostgreSQL's <code>FILTER</code> is the shortcut).</p>
     <div class="tablecard"><div class="scroll"><table>
       <thead><tr><th>Pattern</th><th>Use it to&hellip;</th><th>Example</th><th>Common mistake</th></tr></thead>
       <tbody>
@@ -1092,6 +1198,19 @@ EXTRACT(DOW FROM order_date)</pre></td>
           <td class="use"><b>Does NOT work</b> &mdash; avoid</td>
           <td class="code"><pre>COUNT(phone IS NULL)  -- wrong</pre></td>
           <td class="miss">A boolean is never NULL &rarr; counts <b>every</b> row</td>
+        </tr>
+        <tr>
+          <td class="term">COUNT(*) FILTER (WHERE&hellip;)</td>
+          <td class="use">PostgreSQL shortcut for counting a condition</td>
+          <td class="code"><pre>COUNT(*) FILTER (WHERE phone IS NULL)</pre></td>
+          <td class="miss">PostgreSQL only &mdash; use <code>SUM(CASE&hellip;)</code> in MySQL / Oracle</td>
+        </tr>
+        <tr>
+          <td class="term">AVG(CASE&hellip;)</td>
+          <td class="use">Share of rows matching &mdash; a percentage</td>
+          <td class="code"><pre>ROUND(100.0 * AVG(CASE WHEN phone IS NULL
+    THEN 1 ELSE 0 END), 1)</pre></td>
+          <td class="miss">Needs <code>ELSE 0</code> &mdash; without it AVG skips the non-matches and gives 100%</td>
         </tr>
       </tbody>
     </table></div></div>
@@ -1143,7 +1262,7 @@ SELECT * FROM ranked</pre></td>
   <!-- FOOTER: two <span>s; the flexbox rule pushes them to opposite ends. -->
   <footer>
     <span>Your working reference &mdash; grows as you do.</span>
-    <span class="mono">FROM &rarr; WHERE &rarr; GROUP BY &rarr; HAVING &rarr; SELECT &rarr; ORDER BY</span>
+    <span class="mono">FROM &rarr; WHERE &rarr; GROUP BY &rarr; HAVING &rarr; SELECT &rarr; DISTINCT &rarr; ORDER BY &rarr; LIMIT</span>
   </footer>
 </div>
 <!-- ============================ end .wrap ============================ -->
