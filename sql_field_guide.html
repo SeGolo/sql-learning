@@ -452,6 +452,21 @@
   .pblock .scroll:last-child > table.plain{margin-bottom:0}
   .pblock .scroll + p.plbl,.scroll + p.plbl,.callout > ul + p.plbl{margin-top:.75rem}
   .pblock code{font-family:var(--mono);font-size:.92em}
+  /* THEORY: the study-book chapter at the start of a section; plain text, no box */
+  .theory{margin:.25rem 0 1.25rem;font-size:.92rem;line-height:1.6;color:var(--muted);max-width:78ch}
+  .theory h3{margin:.9rem 0 .2rem;font:500 1em var(--sans);color:var(--ink)}
+  .theory h3:first-child{margin-top:0}
+  .theory p{margin:0 0 .5rem}
+  .theory ul,.theory ol{margin:0 0 .5rem;padding-left:1.2rem;font-size:1em;color:inherit}
+  .theory li{margin:.15rem 0}
+  .theory b{font-weight:500;color:var(--ink)}
+  .theory code{font-family:var(--mono);font-size:.92em;color:inherit}
+  .theory pre{margin:.25rem 0 .6rem;font:.92em/1.5 var(--mono);color:var(--ink);white-space:pre-wrap}
+  .theory .scroll{margin:.25rem 0 .6rem}
+  .theory table.plain{margin:0}
+  .theory + p.plbl{margin-top:.75rem}
+  .callout > ul + .theory{margin-top:1rem}
+  html.embed .theory{font-size:13px;max-width:none}
 </style>
 
 <!-- ============================ VISIBLE CONTENT ============================ -->
@@ -461,7 +476,7 @@
   <header class="masthead">
     <p class="eyebrow">Reference &middot; built for Serg</p>
     <h1>SQL Field Guide</h1>
-    <p class="lede">Every clause and function you've met: what it is, when to use it, an example run on a small sample table, its real output, and the mistake that bites.</p>
+    <p class="lede">Study book and reference. Each section starts with the theory, then every clause and function you've met: what it is, when to use it, an example run on a small sample table, its real output, and the mistake that bites.</p>
 
     <!-- TABLE OF CONTENTS: each <a href="#id"> scrolls to the element
          further down that has the matching id="..." attribute. -->
@@ -489,6 +504,7 @@
          <section id="X">                     one topic; the TOC links point here
            <h2><span class="num">NN</span> Title</h2>
            <p class="intro">one-line overview</p>
+           <div class="theory">...</div>      the theory chapter: idea, how it works, how to think
            <p class="plbl">Table: x</p>       the sample table(s) the examples run on
            <table class="plain sample">
            <table class="onecol pblock">      one small table per clause / function:
@@ -521,6 +537,22 @@
       <li>Aliases work in <code>ORDER BY</code> but not in <code>WHERE</code> or <code>HAVING</code> &mdash; the alias is born in <code>SELECT</code>, which runs late. Exception: PostgreSQL and MySQL also let you write the alias in <code>GROUP BY</code> (a shortcut they add); Oracle does not.</li>
       <li><code>SELECT</code> &mdash; where you build aliases and computed columns &mdash; happens almost <b>last</b>.</li>
     </ul>
+    <div class="theory">
+      <h3>How a query really runs</h3>
+      <p>Think of a query as a production line. Each step receives a table, changes it, and passes a new table to the next step. A step can only see what the steps before it produced. The database may work differently inside to gain speed, but the result is always the same as if it followed this order.</p>
+      <p>Follow the example below on the <code>staff</code> table:</p>
+      <ol>
+      <li><code>FROM</code> takes all 5 rows.</li>
+      <li><code>WHERE salary &gt;= 50000</code> leaves 4 rows. Jan goes, because a NULL salary does not pass the test.</li>
+      <li><code>GROUP BY dept</code> makes 3 groups: HR, IT, Sales.</li>
+      <li><code>HAVING AVG(salary) &gt; 60000</code> removes HR (average 55000).</li>
+      <li><code>SELECT</code> builds the columns. Only now does the name <code>avg_pay</code> exist.</li>
+      <li><code>ORDER BY avg_pay DESC</code> can use that name: IT, then Sales.</li>
+      <li><code>LIMIT 1</code> keeps IT.</li>
+      </ol>
+      <h3>How to use this</h3>
+      <p>Plan a query in running order, not written order. First ask which tables you need, then which rows, which groups, and only at the end which columns to show.</p>
+    </div>
     <p class="plbl">Table: staff</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>phone</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td><td>777 111</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td><td>777 333</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td class="nul">NULL</td><td>777 444</td></tr><tr><td>5</td><td>Lucie</td><td>Sales</td><td>70000</td><td class="nul">NULL</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Example:</p>
@@ -543,6 +575,19 @@ LIMIT 1                               -- 7</pre></td></tr>
   <section id="types">
     <h2><span class="num">01</span> Data types &mdash; what a column holds</h2>
     <p class="intro">Every column has a type, and most surprising results come from it: integer division, text that looks like a number, dates vs timestamps. Names are PostgreSQL; MySQL and Oracle differ slightly.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>A type decides three things about a column: which values it accepts, which operations work on it, and how its values compare and sort. The same characters can behave differently: as numbers, 100 is larger than 92; as text, <code>'100'</code> sorts before <code>'92'</code>, because text is compared one character at a time and 1 comes before 9.</p>
+      <h3>How it works</h3>
+      <ul>
+      <li><b>The inputs decide the result type.</b> Integer / integer gives an integer, so 7 / 2 = 3. Integer / decimal gives a decimal, so 7 / 2.0 = 3.5.</li>
+      <li><b>Exact or approximate.</b> NUMERIC stores the exact digits. DOUBLE PRECISION stores a close binary value, because a number like 0.1 has no exact binary form. That is fast and fine for measurements, but not for money.</li>
+      <li><b>Conversions.</b> A quoted value such as <code>'2024-03-01'</code> becomes a date when you compare it with a date column. A column does not convert by itself: if <code>age</code> is text, <code>age &gt; 40</code> is an error in PostgreSQL. Use <code>CAST</code>.</li>
+      <li><b>NULL fits every type.</b> It means "unknown value", not zero and not empty text.</li>
+      </ul>
+      <h3>How to choose</h3>
+      <p>Counted &rarr; INTEGER. Money &rarr; NUMERIC. Measured &rarr; DOUBLE PRECISION. A day &rarr; DATE. A moment &rarr; TIMESTAMP. Digits you never calculate with, such as phone numbers &rarr; TEXT. When you meet a new table, check the column types before you write anything.</p>
+    </div>
     <p class="plbl">Table: products</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>code</th><th>price</th><th>weight</th><th>in_stock</th></tr></thead><tbody><tr><td>1</td><td>Mug</td><td>CZ</td><td>0.10</td><td>0.1</td><td>true</td></tr><tr><td>2</td><td>Pen</td><td>DE</td><td>0.20</td><td>0.2</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Cap</td><td>CZ</td><td>12.50</td><td>0.3</td><td>false</td></tr></tbody></table></div>
     <p class="plbl">Table: shipments</p>
@@ -621,6 +666,31 @@ WHERE ordered_at &gt;= '2024-03-01'
   <section id="clauses">
     <h2><span class="num">02</span> Clauses &mdash; the skeleton</h2>
     <p class="intro">The building blocks of every query. Written in this order, but <em>run</em> in a different one (see section 00).</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>Each clause answers one question:</p>
+      <ul>
+      <li><code>FROM</code>: where does the data come from?</li>
+      <li><code>WHERE</code>: which rows count?</li>
+      <li><code>GROUP BY</code>: which rows belong together?</li>
+      <li><code>HAVING</code>: which groups count?</li>
+      <li><code>SELECT</code>: what do I show?</li>
+      <li><code>ORDER BY</code> and <code>LIMIT</code>: in which order, and how many?</li>
+      </ul>
+      <p>The result of a query is always a table, so it can be read by another query (section 06).</p>
+      <h3>The most important question: what is one row?</h3>
+      <p>Before writing, finish this sentence: "one row of my result is one &hellip;". One employee means no <code>GROUP BY</code>. One department means <code>GROUP BY dept</code>. Most wrong results come from answering at the wrong level.</p>
+      <h3>From a question to a query</h3>
+      <p>"Departments with at least 2 people whose salary is known." One row = one department. The clauses follow from the words:</p>
+      <pre>SELECT dept, COUNT(*) AS people   -- what to show
+FROM staff
+WHERE salary IS NOT NULL          -- "whose salary is known": a test on rows
+GROUP BY dept                     -- one row per department
+HAVING COUNT(*) &gt;= 2              -- "at least 2": a test on groups</pre>
+      <p>The result is HR, with 2 people. IT has only Eva left, because Jan's salary is NULL.</p>
+      <h3>Rows have no natural order</h3>
+      <p>A table is a set of rows, not a list. Unless you write <code>ORDER BY</code>, the database can return them in any order, even if it looks stable today.</p>
+    </div>
     <p class="plbl">Table: staff</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>phone</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td><td>777 111</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td><td>777 333</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td class="nul">NULL</td><td>777 444</td></tr><tr><td>5</td><td>Lucie</td><td>Sales</td><td>70000</td><td class="nul">NULL</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Clauses descriptions:</p>
@@ -711,6 +781,29 @@ WHERE points = (SELECT MAX(points) FROM scores)</pre></td></tr>
   <section id="filters">
     <h2><span class="num">03</span> Filtering operators</h2>
     <p class="intro">Live inside <code>WHERE</code> and <code>HAVING</code>. The boundary and NULL rules here caused most of your early bugs.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p><code>WHERE</code> tests each row and keeps it only if the answer is TRUE. There are three possible answers, not two: TRUE, FALSE and UNKNOWN. Any comparison with NULL gives UNKNOWN, because you cannot say whether an unknown value equals something. A row with UNKNOWN is dropped, the same as FALSE.</p>
+      <h3>How AND, OR and NOT handle UNKNOWN</h3>
+      <div class="scroll"><table class="plain"><thead><tr><th>Expression</th><th>Result</th><th>Why</th></tr></thead><tbody>
+      <tr><td>TRUE AND UNKNOWN</td><td>UNKNOWN</td><td>depends on the unknown side</td></tr>
+      <tr><td>FALSE AND UNKNOWN</td><td>FALSE</td><td>one FALSE is enough</td></tr>
+      <tr><td>TRUE OR UNKNOWN</td><td>TRUE</td><td>one TRUE is enough</td></tr>
+      <tr><td>FALSE OR UNKNOWN</td><td>UNKNOWN</td><td>depends on the unknown side</td></tr>
+      <tr><td>NOT UNKNOWN</td><td>UNKNOWN</td><td>still unknown</td></tr>
+      </tbody></table></div>
+      <p>So <code>coupon &lt;&gt; 'SPRING'</code> does not return rows without a coupon: for them the test is UNKNOWN. To keep them, ask for it: <code>coupon &lt;&gt; 'SPRING' OR coupon IS NULL</code>.</p>
+      <h3>Order of evaluation</h3>
+      <p>SQL applies NOT first, then AND, then OR, the way multiplication comes before addition. Use parentheses whenever you mix AND and OR.</p>
+      <h3>Turning conditions around</h3>
+      <p>To negate a combined condition, flip each part and swap AND with OR: <code>NOT (a AND b)</code> is <code>NOT a OR NOT b</code>. "Not (paid and over 100)" means "not paid, or not over 100".</p>
+      <h3>How to read the task</h3>
+      <ul>
+      <li>"More than 100" excludes 100. "At least 100" includes it.</li>
+      <li>"In March" on a timestamp: from the start of March up to, but not including, the start of April.</li>
+      <li>Whenever you write <code>&lt;&gt;</code> or <code>NOT</code>, ask: can this column be NULL, and do I want those rows?</li>
+      </ul>
+    </div>
     <p class="plbl">Table: sales</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>product</th><th>status</th><th>amount</th><th>ordered_at</th><th>coupon</th></tr></thead><tbody><tr><td>1</td><td>Blue mug</td><td>paid</td><td>120</td><td>2024-03-01 09:00:00</td><td>SPRING</td></tr><tr><td>2</td><td>blue cap</td><td>paid</td><td>80</td><td>2024-03-31 18:30:00</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Red pen</td><td>new</td><td>200</td><td>2024-04-01 10:00:00</td><td class="nul">NULL</td></tr><tr><td>4</td><td>Red cup</td><td>cancelled</td><td>50</td><td>2024-04-02 11:00:00</td><td>SPRING</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Operators descriptions:</p>
@@ -765,6 +858,24 @@ WHERE (status = 'paid' OR status = 'new')
   <section id="agg">
     <h2><span class="num">04</span> Aggregate functions</h2>
     <p class="intro">Squash many rows into one number &mdash; per group with <code>GROUP BY</code>, or over the whole table.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>An aggregate takes many values and returns one. The difference between the two forms is only how many groups there are:</p>
+      <ul>
+      <li>No <code>GROUP BY</code>: the whole table is one group, so you get one row.</li>
+      <li>With <code>GROUP BY dept</code>: rows are sorted into piles, one per department, and each pile gives one row.</li>
+      </ul>
+      <h3>Why other columns are not allowed</h3>
+      <p>After grouping, HR is one row but contains two people. If you ask for <code>name</code>, the database cannot know whether to show Anna or Petr, so it raises an error. In <code>SELECT</code> you can only use grouped columns and aggregates.</p>
+      <h3>Three rules worth remembering</h3>
+      <ul>
+      <li><b>NULLs are skipped</b> by every aggregate except <code>COUNT(*)</code>, which counts rows. That changes averages: the IT average below is 80000 because only Eva has a salary.</li>
+      <li><b>No rows in, what comes out?</b> <code>COUNT</code> gives 0. <code>SUM</code>, <code>AVG</code>, <code>MIN</code> and <code>MAX</code> give NULL, not 0.</li>
+      <li><b>No aggregate inside an aggregate.</b> <code>AVG(COUNT(*))</code> is an error. Do it in two steps: count per group in a subquery, then average (section 06).</li>
+      </ul>
+      <h3>How to think about it</h3>
+      <p>Filter before grouping if the condition is about a row (<code>WHERE</code>). Filter after grouping if it is about the whole group (<code>HAVING</code>). Words such as "per", "each" and "by" usually point to the <code>GROUP BY</code> column.</p>
+    </div>
     <p class="plbl">Table: staff</p>
     <table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>phone</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td><td>777 111</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td><td>777 333</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td class="nul">NULL</td><td>777 444</td></tr><tr><td>5</td><td>Lucie</td><td>Sales</td><td>70000</td><td class="nul">NULL</td></tr></tbody></table>
     <p class="plbl" style="margin:.75rem 0 .25rem">Functions descriptions:</p>
@@ -827,6 +938,30 @@ GROUP BY dept</pre></td></tr>
   <section id="joins">
     <h2><span class="num">05</span> Joins &mdash; combine tables side by side</h2>
     <p class="intro">Joins <b>add columns</b>. The <code>ON</code> is just a condition &mdash; usually a foreign key, but it can compare any columns.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>Good databases split data into separate tables so that each fact is stored once. A customer's name sits in <code>customers</code>; each order only stores <code>cust_id</code>. That column is a <b>foreign key</b>: a value pointing to a row in another table. A join puts the pieces back together.</p>
+      <h3>How it works</h3>
+      <p>Imagine two steps. First, pair every row of one table with every row of the other. Second, keep the pairs where <code>ON</code> is TRUE. Outer joins then add back the rows that found no partner, with NULLs in the missing columns. With the sample tables below:</p>
+      <ul>
+      <li>All pairs: 3 customers &times; 4 orders = 12.</li>
+      <li><code>INNER JOIN</code>: <code>ON</code> is TRUE for 3 pairs &rarr; 3 rows.</li>
+      <li><code>LEFT JOIN</code>: adds Eva, who has no orders &rarr; 4 rows.</li>
+      <li><code>RIGHT JOIN</code>: adds order 13, which has no customer &rarr; 4 rows.</li>
+      <li><code>FULL OUTER JOIN</code>: adds both &rarr; 5 rows.</li>
+      </ul>
+      <h3>How many rows will I get?</h3>
+      <p>Ask this before every join, because it is where totals go wrong:</p>
+      <ul>
+      <li><b>One-to-one:</b> the row count stays the same.</li>
+      <li><b>One-to-many:</b> the "one" side repeats once per match. Anna has 2 orders, so she appears twice. A <code>SUM</code> on a column from her side would count it twice.</li>
+      <li><b>Many-to-many:</b> matches multiply. See Fan-out below.</li>
+      </ul>
+      <h3>ON or WHERE?</h3>
+      <p><code>ON</code> decides what counts as a match. <code>WHERE</code> runs afterwards and removes rows from the joined result. For an inner join the two give the same result. For an outer join they differ: a <code>WHERE</code> test on the right table removes the rows filled with NULLs, which were the reason for using the outer join.</p>
+      <h3>How to choose</h3>
+      <p>Do I need rows that have no match? No &rarr; INNER. Yes, from one side &rarr; LEFT. From both sides &rarr; FULL. A NULL key never matches anything, even another NULL.</p>
+    </div>
     <p class="plbl">Table: customers</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th></tr></thead><tbody><tr><td>1</td><td>Anna</td></tr><tr><td>2</td><td>Petr</td></tr><tr><td>3</td><td>Eva</td></tr></tbody></table></div>
     <p class="plbl">Table: orders</p>
@@ -994,6 +1129,27 @@ JOIN categories c ON c.category_id = pr.category_id  -- pr is above &#10004;</pr
   <section id="subq">
     <h2><span class="num">06</span> Subqueries &amp; NULL traps</h2>
     <p class="intro">A query inside another query: as a list (<code>IN</code>), a test (<code>EXISTS</code>), one value, or a table. NULL is "unknown", so comparisons with it are never true &mdash; the source of the nastiest traps.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>A subquery splits a hard question into two easier ones: the inner query answers the small question, the outer query uses the answer. "Orders above average" becomes: what is the average? Which orders are above it?</p>
+      <h3>What it returns decides where it goes</h3>
+      <div class="scroll"><table class="plain"><thead><tr><th>Returns</th><th>Use with</th></tr></thead><tbody>
+      <tr><td>one value</td><td>=, &gt;, &lt;</td></tr>
+      <tr><td>one column</td><td>IN, NOT IN</td></tr>
+      <tr><td>a whole table</td><td>FROM (needs an alias)</td></tr>
+      <tr><td>rows or no rows</td><td>EXISTS, NOT EXISTS</td></tr>
+      </tbody></table></div>
+      <h3>Correlated subqueries</h3>
+      <p>A normal subquery gives one answer for the whole outer query. A <b>correlated</b> one mentions a column of the outer query, so think of it as running again for each outer row: for each client, "is there a purchase with this client's id?".</p>
+      <h3>Why one NULL breaks NOT IN</h3>
+      <p><code>x NOT IN (1, NULL)</code> means <code>x &lt;&gt; 1 AND x &lt;&gt; NULL</code>. For Petr, id 2: <code>2 &lt;&gt; 1</code> is TRUE, <code>2 &lt;&gt; NULL</code> is UNKNOWN, and TRUE AND UNKNOWN is UNKNOWN (section 03). The row is dropped, and the same happens to every row. <code>NOT EXISTS</code> does not have this problem, because it only asks whether a matching row exists.</p>
+      <h3>Subquery or join?</h3>
+      <ul>
+      <li>You need columns from the other table &rarr; JOIN.</li>
+      <li>You only need to test something &rarr; IN or EXISTS. They never repeat rows: a JOIN to <code>purchases</code> shows Anna twice, <code>IN</code> shows her once.</li>
+      <li>You need to aggregate twice, or to aggregate before joining &rarr; subquery in FROM.</li>
+      </ul>
+    </div>
     <p class="plbl">Table: clients</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>referred_by</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td class="nul">NULL</td></tr><tr><td>2</td><td>Petr</td><td>1</td></tr><tr><td>3</td><td>Eva</td><td>1</td></tr><tr><td>4</td><td>Jan</td><td class="nul">NULL</td></tr></tbody></table></div>
     <p class="plbl">Table: purchases</p>
@@ -1074,6 +1230,26 @@ FROM pay</pre></td></tr>
   <section id="sets">
     <h2><span class="num">07</span> Stacking rows</h2>
     <p class="intro">Where joins add columns, these add <b>rows</b> &mdash; two result sets on top of each other. Both halves need the same column count and order.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>A join adds columns: it places tables side by side. These keywords add or compare rows: they place results on top of each other. Use them when both results are the same kind of thing, such as customers of 2023 and customers of 2024. If the second table describes the first with extra details, you need a join.</p>
+      <h3>How it works</h3>
+      <ul>
+      <li><b>Columns match by position, not by name.</b> Both halves need the same number of columns, with compatible types. The output takes its column names from the first <code>SELECT</code>.</li>
+      <li><b>Whole rows are compared.</b> Two rows are "the same" only if every column matches. Here, unlike with <code>=</code>, NULL counts as equal to NULL.</li>
+      <li><b>Duplicates are removed</b> unless you write <code>ALL</code>.</li>
+      </ul>
+      <h3>Think of two circles</h3>
+      <p>With the samples below, 2023 = {1, 2, 2, 3} and 2024 = {2, 3, 4}:</p>
+      <ul>
+      <li><code>UNION</code>, in either: 1, 2, 3, 4.</li>
+      <li><code>INTERSECT</code>, in both: 2, 3.</li>
+      <li><code>EXCEPT</code>, in the first only: 1.</li>
+      <li><code>UNION ALL</code>, simply everything: 7 rows.</li>
+      </ul>
+      <h3>Order of evaluation</h3>
+      <p><code>INTERSECT</code> runs before <code>UNION</code> and <code>EXCEPT</code>. With three or more results, use parentheses.</p>
+    </div>
     <p class="plbl">Table: orders_2023</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>cust_id</th></tr></thead><tbody><tr><td>1</td></tr><tr><td>2</td></tr><tr><td>2</td></tr><tr><td>3</td></tr></tbody></table></div>
     <p class="plbl">Table: orders_2024</p>
@@ -1135,6 +1311,21 @@ ORDER BY cust_id DESC</pre></td></tr>
   <section id="rowfn">
     <h2><span class="num">08</span> Row-level functions</h2>
     <p class="intro">Transform a value <em>per row</em>. These clean, convert, and label your data &mdash; the daily work of data quality.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>A row function takes values from one row and returns one value for that row. The number of rows does not change. That is the opposite of an aggregate, which turns many rows into one. You can use a row function anywhere a value fits: in <code>SELECT</code>, <code>WHERE</code>, <code>GROUP BY</code>, <code>ORDER BY</code>, and inside an aggregate.</p>
+      <h3>Nested functions run from the inside out</h3>
+      <pre>REPLACE(LOWER(device), ' ', '')
+'Smart Phone'  &rarr; LOWER   &rarr; 'smart phone'
+'smart phone'  &rarr; REPLACE &rarr; 'smartphone'</pre>
+      <p>Read them from the middle, and write them one step at a time.</p>
+      <h3>NULL goes in, NULL comes out</h3>
+      <p>Most functions return NULL when an input is NULL: <code>LOWER(NULL)</code> and <code>LENGTH(NULL)</code> are NULL. Some are made to handle it: <code>COALESCE</code> replaces it, <code>CONCAT</code> skips it, and <code>CASE</code> can test for it.</p>
+      <h3>How CASE decides</h3>
+      <p>It tests the conditions from top to bottom and stops at the first TRUE. So each later condition already knows the earlier ones failed: in the salary example below, <code>salary &lt; 100000</code> only sees salaries of 75000 or more. With no match and no <code>ELSE</code>, the result is NULL. A NULL value fails every comparison, so it falls through to <code>ELSE</code>: test <code>IS NULL</code> first if that matters.</p>
+      <h3>Row functions and aggregates work together</h3>
+      <p>In <code>SUM(CASE WHEN &hellip; THEN 1 ELSE 0 END)</code>, the <code>CASE</code> runs once per row and <code>SUM</code> then adds up the results. Section 10 builds on this.</p>
+    </div>
     <p class="plbl">Table: emps</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>salary</th><th>bonus</th><th>age</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>50000</td><td>5000</td><td>9</td></tr><tr><td>2</td><td>Petr</td><td>80000</td><td class="nul">NULL</td><td>40</td></tr><tr><td>3</td><td>Eva</td><td>120000</td><td>0</td><td>52</td></tr></tbody></table></div>
     <p class="plbl">Table: contacts</p>
@@ -1252,6 +1443,27 @@ FROM emps</pre></td></tr>
   <section id="dates">
     <h2><span class="num">09</span> Dates &amp; times</h2>
     <p class="intro">Group by period, pick parts of a date, shift and subtract dates. Most date bugs are about a time hiding inside a TIMESTAMP, or about which day is "today".</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p>There are three kinds of time value. A DATE is a day on the calendar, a TIMESTAMP is an exact moment, and an INTERVAL is a length of time. The type of the result depends on the inputs:</p>
+      <div class="scroll"><table class="plain"><thead><tr><th>Calculation</th><th>Result</th></tr></thead><tbody>
+      <tr><td>date + number</td><td>date</td></tr>
+      <tr><td>date - date</td><td>number of days</td></tr>
+      <tr><td>timestamp - timestamp</td><td>interval</td></tr>
+      <tr><td>timestamp + interval</td><td>timestamp</td></tr>
+      <tr><td>date + interval</td><td>timestamp</td></tr>
+      </tbody></table></div>
+      <h3>Timeline or cycle?</h3>
+      <p>This choice decides which function you group by:</p>
+      <ul>
+      <li><b>Timeline</b>, such as a sales trend: use <code>DATE_TRUNC</code>. It keeps the year, so January 2023 and January 2024 stay separate.</li>
+      <li><b>Cycle</b>, such as the busiest weekday or month in general: use <code>EXTRACT</code>. It drops the rest, so all Mondays become one group.</li>
+      </ul>
+      <h3>Filter periods with a closed start and an open end</h3>
+      <p>Write <code>&gt;= start AND &lt; next_start</code>. This works for DATE and TIMESTAMP, needs no thinking about month lengths, and never counts a row twice when periods sit next to each other.</p>
+      <h3>Empty periods do not appear</h3>
+      <p><code>GROUP BY</code> can only make groups from rows that exist. In the sample below there is nothing in February, so the <code>DATE_TRUNC</code> output jumps from January to March instead of showing 0. For a full list of months, make the months first with <code>generate_series</code> and <code>LEFT JOIN</code> your data to them.</p>
+    </div>
     <p class="plbl">Table: deliveries</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>order_date</th><th>shipped</th><th>delivered</th></tr></thead><tbody><tr><td>1</td><td>2024-01-31 10:00:00</td><td>2024-02-01</td><td>2024-02-03</td></tr><tr><td>2</td><td>2024-01-15 16:45:00</td><td>2024-01-16</td><td>2024-01-23</td></tr><tr><td>3</td><td>2024-03-03 08:30:00</td><td>2024-03-04</td><td>2024-03-05</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Functions descriptions:</p>
@@ -1312,6 +1524,32 @@ FROM deliveries</pre></td></tr>
   <section id="count">
     <h2><span class="num">10</span> Counting a condition</h2>
     <p class="intro">Standard SQL has no "count only the matching rows" function &mdash; you fake it by turning the condition into 1s and 0s, then summing. Several spellings, same answer (PostgreSQL's <code>FILTER</code> is the shortcut).</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p><code>WHERE</code> removes rows from the whole query, so it can answer only one question at a time. To count several things side by side, keep all the rows and make each aggregate look only at the rows it wants. This is called <b>conditional aggregation</b>.</p>
+      <h3>How it works</h3>
+      <p><code>CASE</code> runs once per row and turns the condition into a value. The aggregate then treats those values as usual:</p>
+      <ul>
+      <li><b>SUM:</b> <code>THEN 1 ELSE 0</code> &rarr; adding up 1s and 0s counts the matches.</li>
+      <li><b>COUNT:</b> <code>THEN 1</code> with no <code>ELSE</code> &rarr; non-matches become NULL, and COUNT skips NULLs.</li>
+      <li><b>AVG:</b> <code>THEN 1 ELSE 0</code> &rarr; the average of 1s and 0s is the share. For phones missing in <code>staff</code>: 0, 1, 0, 0, 1 averages 0.4, which is 40%.</li>
+      </ul>
+      <h3>Why WHERE is not the same</h3>
+      <p>Count missing phones per department. IT has none:</p>
+      <pre>-- WHERE: IT disappears, you get only HR and Sales
+SELECT dept, COUNT(*) AS no_phone
+FROM staff
+WHERE phone IS NULL
+GROUP BY dept
+
+-- CASE: all 3 departments stay, IT shows 0
+SELECT dept,
+       SUM(CASE WHEN phone IS NULL THEN 1 ELSE 0 END) AS no_phone
+FROM staff
+GROUP BY dept</pre>
+      <h3>How to choose</h3>
+      <p>One condition and no need to see zero groups &rarr; <code>WHERE</code>. Several conditions in one row, a share of the total, or groups that must show 0 &rarr; conditional aggregation.</p>
+    </div>
     <p class="plbl">Table: staff</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>phone</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td><td>777 111</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td><td>777 333</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td class="nul">NULL</td><td>777 444</td></tr><tr><td>5</td><td>Lucie</td><td>Sales</td><td>70000</td><td class="nul">NULL</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Patterns descriptions:</p>
@@ -1368,6 +1606,27 @@ FROM staff</pre></td></tr>
   <section id="next">
     <h2><span class="num">11</span> Coming next &mdash; advanced</h2>
     <p class="intro">Not learned yet. Window functions are the dividing line between "basic" and "pokro&#269;il&aacute; znalost SQL" &mdash; learn them next.</p>
+    <div class="theory">
+      <h3>The idea</h3>
+      <p><code>GROUP BY</code> squashes rows: you get the department average, but you lose the people. A <b>window function</b> calculates over a group of rows and keeps every row: each person stays, with the department average next to them.</p>
+      <h3>The parts of OVER (&hellip;)</h3>
+      <ul>
+      <li><code>PARTITION BY dept</code>: split the rows into groups. Without it, all rows are one group.</li>
+      <li><code>ORDER BY salary DESC</code>: sort inside each group. Ranking and <code>LAG</code> need this.</li>
+      </ul>
+      <p>Adding <code>ORDER BY</code> to <code>SUM</code> changes what it does: it now adds up the rows so far, which gives a running total.</p>
+      <h3>Three ways to rank</h3>
+      <p>For the salaries 80, 60, 60, 40:</p>
+      <div class="scroll"><table class="plain"><thead><tr><th>Function</th><th>Result</th><th>On a tie</th></tr></thead><tbody>
+      <tr><td>ROW_NUMBER</td><td>1, 2, 3, 4</td><td>picks an order; tied rows get different numbers</td></tr>
+      <tr><td>RANK</td><td>1, 2, 2, 4</td><td>same number, then a gap</td></tr>
+      <tr><td>DENSE_RANK</td><td>1, 2, 2, 3</td><td>same number, no gap</td></tr>
+      </tbody></table></div>
+      <h3>Where they run</h3>
+      <p>Window functions run after <code>WHERE</code>, <code>GROUP BY</code> and <code>HAVING</code> (section 00), so you cannot filter on them in those clauses. Calculate them in a CTE or subquery, then filter in the outer query.</p>
+      <h3>CTE: naming a step</h3>
+      <p><code>WITH name AS (&hellip;)</code> gives a subquery a name and lets you read the query from top to bottom, like a recipe. The name exists only for that one statement. Each step can use the steps before it.</p>
+    </div>
     <p class="plbl">Table: team</p>
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td>60000</td></tr><tr><td>5</td><td>Tom</td><td>IT</td><td>60000</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Tools descriptions:</p>
@@ -1517,7 +1776,7 @@ ORDER BY dept</pre></td></tr>
       if (q && !before) before = boxes.filter(function (b) { return !b.classList.contains('collapsed'); });
       boxes.forEach(function (box) {
         // a one-column function table is one item; rows inside it and its small output/sample tables are not
-        var items = box.querySelectorAll('table:not(.onecol):not(.plain) > tbody > tr, table.onecol, .note li, .callout > ul > li');
+        var items = box.querySelectorAll('table:not(.onecol):not(.plain) > tbody > tr, table.onecol, .theory, .note li, .callout > ul > li');
         var title = box.querySelector('h2').textContent.toLowerCase().indexOf(q) >= 0;   // section name matches -> show it whole
         var any = false;
         items.forEach(function (it) {
