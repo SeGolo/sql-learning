@@ -284,16 +284,6 @@
   .callout h2{margin-top:0;color:var(--ink)}
 
   /* FLOW - the "FROM -> WHERE -> ..." row of chips inside the callout. */
-  .flow{
-    font-family:var(--mono);
-    font-size:clamp(.8rem,2.5vw,1.05rem);
-    font-weight:500;
-    color:var(--ink);
-    display:flex;flex-wrap:wrap;gap:.4rem .55rem;align-items:center;  /* gap: 0.4rem between wrapped rows, 0.55rem between items */
-    margin:.6rem 0 1rem;
-  }
-  .flow span{background:var(--surface);border:1px solid var(--border-strong);border-radius:7px;padding:.28rem .6rem}  /* each keyword chip */
-  .flow .arw{border:none;background:none;color:var(--accent);padding:0}  /* the "->" arrows: strip the chip styling off */
   .callout ul{margin:.5rem 0 0;padding-left:1.1rem;color:var(--muted);font-size:.92rem}
   .callout li{margin:.35rem 0}
   .callout code{font-family:var(--mono);font-size:.86em;color:var(--ink)}
@@ -522,16 +512,16 @@
   <div class="callout" id="order">
     <h2><span class="num">00</span> The key mental model &mdash; execution order</h2>
     <p style="margin:.2rem 0 .4rem;color:var(--muted)">You <em>write</em> the clauses in one order, but SQL <em>runs</em> them in another. This single fact explains most of the "why can't I&hellip;" bugs.</p>
-    <div class="flow">
-      <span>FROM</span><span class="arw">&rarr;</span>
-      <span>WHERE</span><span class="arw">&rarr;</span>
-      <span>GROUP BY</span><span class="arw">&rarr;</span>
-      <span>HAVING</span><span class="arw">&rarr;</span>
-      <span>SELECT</span><span class="arw">&rarr;</span>
-      <span>DISTINCT</span><span class="arw">&rarr;</span>
-      <span>ORDER BY</span><span class="arw">&rarr;</span>
-      <span>LIMIT</span>
-    </div>
+    <div class="scroll"><table class="plain"><thead><tr><th>Step</th><th>Clause</th></tr></thead><tbody>
+      <tr><td>1</td><td>FROM</td></tr>
+      <tr><td>2</td><td>WHERE</td></tr>
+      <tr><td>3</td><td>GROUP BY</td></tr>
+      <tr><td>4</td><td>HAVING</td></tr>
+      <tr><td>5</td><td>SELECT</td></tr>
+      <tr><td>6</td><td>DISTINCT</td></tr>
+      <tr><td>7</td><td>ORDER BY</td></tr>
+      <tr><td>8</td><td>LIMIT</td></tr>
+    </tbody></table></div>
     <ul>
       <li><code>WHERE</code> can't use <code>COUNT</code>/<code>SUM</code> &mdash; aggregates don't exist until after <code>GROUP BY</code>, so filter groups with <code>HAVING</code>.</li>
       <li>Aliases work in <code>ORDER BY</code> but not in <code>WHERE</code> or <code>HAVING</code> &mdash; the alias is born in <code>SELECT</code>, which runs late. Exception: PostgreSQL and MySQL also let you write the alias in <code>GROUP BY</code> (a shortcut they add); Oracle does not.</li>
@@ -540,14 +530,14 @@
     <div class="theory">
       <h3>How a query really runs</h3>
       <p>Think of a query as a production line. Each step receives a table, changes it, and passes a new table to the next step. A step can only see what the steps before it produced. The database may work differently inside to gain speed, but the result is always the same as if it followed this order.</p>
-      <p>Follow the example below on the <code>staff</code> table:</p>
+      <p>Follow the example below on the <code>staff</code> table. It has no <code>DISTINCT</code>, so it skips step 6:</p>
       <ol>
       <li><code>FROM</code> takes all 5 rows.</li>
       <li><code>WHERE salary &gt;= 50000</code> leaves 4 rows. Jan goes, because a NULL salary does not pass the test.</li>
       <li><code>GROUP BY dept</code> makes 3 groups: HR, IT, Sales.</li>
       <li><code>HAVING AVG(salary) &gt; 60000</code> removes HR (average 55000).</li>
       <li><code>SELECT</code> builds the columns. Only now does the name <code>avg_pay</code> exist.</li>
-      <li><code>ORDER BY avg_pay DESC</code> can use that name: IT, then Sales.</li>
+      <li value="7"><code>ORDER BY avg_pay DESC</code> can use that name: IT, then Sales.</li>
       <li><code>LIMIT 1</code> keeps IT.</li>
       </ol>
       <h3>How to use this</h3>
@@ -557,15 +547,15 @@
     <div class="scroll"><table class="plain sample"><thead><tr><th>id</th><th>name</th><th>dept</th><th>salary</th><th>phone</th></tr></thead><tbody><tr><td>1</td><td>Anna</td><td>HR</td><td>50000</td><td>777 111</td></tr><tr><td>2</td><td>Petr</td><td>HR</td><td>60000</td><td class="nul">NULL</td></tr><tr><td>3</td><td>Eva</td><td>IT</td><td>80000</td><td>777 333</td></tr><tr><td>4</td><td>Jan</td><td>IT</td><td class="nul">NULL</td><td>777 444</td></tr><tr><td>5</td><td>Lucie</td><td>Sales</td><td>70000</td><td class="nul">NULL</td></tr></tbody></table></div>
     <p class="plbl" style="margin:.75rem 0 .25rem">Example:</p>
     <table class="onecol pblock"><tbody>
-      <tr><td><h3>A full query</h3><p>Written top to bottom, run in the order of the numbers</p></td></tr>
+      <tr><td><h3>A full query</h3><p>Written top to bottom, run in the order of the numbers. No <code>DISTINCT</code> here, so step 6 is skipped</p></td></tr>
       <tr><td><p class="plbl">When to use:</p><ul><li>Error <code>column "x" does not exist</code> on an alias: the clause runs before <code>SELECT</code> created it</li><li>Choosing the filter: on rows &rarr; <code>WHERE</code>; on a <code>COUNT</code> or <code>SUM</code> &rarr; <code>HAVING</code></li><li>Planning a long query: tables first, then filters, groups, columns, and the sort last</li></ul></td></tr>
       <tr><td><pre>SELECT dept, AVG(salary) AS avg_pay   -- 5
 FROM staff                            -- 1
 WHERE salary &gt;= 50000                 -- 2
 GROUP BY dept                         -- 3
 HAVING AVG(salary) &gt; 60000            -- 4
-ORDER BY avg_pay DESC                 -- 6
-LIMIT 1                               -- 7</pre></td></tr>
+ORDER BY avg_pay DESC                 -- 7
+LIMIT 1                               -- 8</pre></td></tr>
       <tr><td><p class="plbl">Output:</p><div class="scroll"><table class="plain out"><thead><tr><th>dept</th><th>avg_pay</th></tr></thead><tbody><tr><td>IT</td><td>80000</td></tr></tbody></table></div></td></tr>
       <tr><td><p class="pmiss"><span class="mw">&#9888;</span> Mistake: <code>HAVING avg_pay &gt; 60000</code> &rarr; error: <code>avg_pay</code> is born in step 5, HAVING runs in step 4</p></td></tr>
     </tbody></table>
